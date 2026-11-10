@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'chat',
 ]
 
 MIDDLEWARE = [
@@ -120,3 +122,18 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# RAG chatbot (chat app)
+# Set GEMINI_API_KEY in our environment. Without it the chat page still loads
+# but answers show the friendly error message.
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_CHAT_MODEL = os.environ.get("GEMINI_CHAT_MODEL", "gemini-2.5-flash")  # so our gemini-2.5-flash-lite
+GEMINI_EMBED_MODEL = "gemini-embedding-001"  # ingestion must use the same model
+LLM_TIMEOUT_SECONDS = 25
+
+RAG_TOP_K = 5
+RAG_MIN_SIMILARITY = 0.55  # tune with real on-topic / off-topic questions
+
+BOT_TOPIC_DESCRIPTION = "managing your medications"
+BOT_EXAMPLE_QUESTION = "What should I do if I miss a dose of my medicine?"

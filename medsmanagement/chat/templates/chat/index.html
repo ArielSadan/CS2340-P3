@@ -1,0 +1,38 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ask a question</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'chat/chat.css' %}">
+</head>
+<body>
+  <main class="chat">
+    <header class="chat__header">
+      <h1>Ask a question</h1>
+      <p>I answer questions about {{ topic }}.</p>
+    </header>
+
+    <section id="chat-log" class="chat__log" aria-live="polite" aria-label="Conversation">
+      <div class="msg msg--bot">
+        <p class="msg__text">Hello! Type your question in the box below and press Send.
+For example: “{{ example_question }}”</p>
+      </div>
+    </section>
+
+    <form id="chat-form" class="chat__form" data-api-url="{% url 'chat:api' %}">
+      <label for="chat-input" class="chat__label">Your question</label>
+      <div class="chat__row">
+        <textarea id="chat-input" rows="2" maxlength="1000"
+                  placeholder="Type your question here" autocomplete="off"></textarea>
+        <button id="send-btn" type="submit">Send</button>
+      </div>
+      <p class="chat__hint">Press Enter to send. Press Shift + Enter for a new line.</p>
+    </form>
+  </main>
+  <script src="{% static 'chat/chat.js' %}"></script>
+</body>
+</html>
