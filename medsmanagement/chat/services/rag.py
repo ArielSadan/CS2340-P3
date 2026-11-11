@@ -51,12 +51,22 @@ def build_prompt(question: str, chunks: list[Chunk]) -> str:
 
 
 def _unique_sources(chunks: list[Chunk]) -> list[str]:
-    seen, out = set(), []
-    for c in chunks:
-        if c.source not in seen:
-            seen.add(c.source)
-            out.append(c.source)
-    return out
+    seen = set()
+    sources = []
+
+    for chunk in chunks:
+        title = chunk.source.strip()
+        url = chunk.source_url.strip()
+        identifier = (title, url)
+
+        if identifier not in seen:
+            seen.add(identifier)
+            sources.append({
+                "title": title,
+                "url": url
+            })
+
+    return sources
 
 
 def answer_question(question: str) -> ChatResult:

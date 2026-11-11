@@ -32,21 +32,92 @@
 
   function addMessage(role, text, opts) {
     opts = opts || {};
+
     const wrap = document.createElement("div");
     wrap.className = "msg msg--" + role;
-    if (opts.status && opts.status !== "ok") wrap.classList.add("msg--" + opts.status);
+
+    if (opts.status && opts.status !== "ok") {
+      wrap.classList.add("msg--" + opts.status);
+    }
 
     const p = document.createElement("p");
     p.className = "msg__text";
-    p.textContent = text; // so model cannot inject HTML
+    p.textContent = text;
     wrap.appendChild(p);
 
-    // J: user store 4 can replace this
-    if (opts.sources && opts.sources.length) {
-      const s = document.createElement("p");
-      s.className = "msg__sources";
-      s.textContent = "Sources: " + opts.sources.join(", ");
-      wrap.appendChild(s);
+    if (
+      role === "bot" &&
+      (!opts.status || opts.status === "ok") &&
+      Array.isArray(opts.sources) &&
+      opts.sources.length
+    ) {
+      const section = document.createElement("div");
+      section.className = "msg__sources";
+
+      const heading = document.createElement("p");
+      heading.textContent = "Sources provided for this answer:";
+      section.appendChild(heading);
+
+      const list = document.createElement("ul");
+      const seen = new Set();
+
+      opts.sources.forEach(function (source) {
+        const title = typeof source === "string"
+          ? source
+          : source && source.title;
+
+        if (typeof title !== "string" || !title.trim()) return;
+
+        const rawUrl = source && typeof source === "object"
+          ? source.url
+          : "";
+
+        let safeUrl = "";
+
+        if (typeof rawUrl === "string" && rawUrl.trim()) {
+          try {
+            const parsed = new URL(rawUrl.trim());
+
+            if (
+              ["https:", "http:"].includes(parsed.protocol) &&
+              !parsed.username &&
+              !parsed.password
+            ) {
+              safeUrl = parsed.href;
+            }
+          } catch (e) {
+            // Invalid URLs are shown as plain text.
+          }
+        }
+
+        const identifier = JSON.stringify([title.trim(), safeUrl]);
+        if (seen.has(identifier)) return;
+        seen.add(identifier);
+
+        const item = document.createElement("li");
+
+        if (safeUrl) {
+          const link = document.createElement("a");
+          link.href = safeUrl;
+          link.textContent = title.trim();
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.setAttribute(
+            "aria-label",
+            title.trim() + " (opens in a new tab)"
+          );
+          item.appendChild(link);
+        } else {
+          item.textContent = title.trim() + " (link unavailable)";
+        }
+
+        list.appendChild(item);
+      });
+
+      if (list.children.length) {
+        section.appendChild(list);
+        wrap.appendChild(section);
+      }
     }
 
     log.appendChild(wrap);

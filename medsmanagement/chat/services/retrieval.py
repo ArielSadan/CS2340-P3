@@ -14,6 +14,7 @@ class Chunk:
     text: str
     source: str
     score: float
+    source_url: str = ""
     
 class RetrievalError(Exception):
     """Raised when embedding or the database fails."""
@@ -27,17 +28,31 @@ def from_bytes(blob) -> np.ndarray:
     return np.frombuffer(bytes(blob), dtype=np.float32)
 
 
-def add_chunks(items: list[tuple[str, str]]) -> int:
-    """For ingestion teammates: items = [(source, text), ...]. Returns rows created."""
-    items = [(s, t) for s, t in items if t and t.strip()]
-    if not items:
+def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]]) -> int:
+    cleaned_items = []
+    for item in items:
+        source, text = item[:2]
+        source_url = item[2] if len(item) == 3 else ""
+
+        if text and text.strip():
+            cleaned_items.append((source, text.strip(), source_url))
+
+    if not cleaned_items:
         return 0
-    vectors = embed_documents([t for _, t in items])
-    DocumentChunk.objects.bulk_create(
-        DocumentChunk(source=s, text=t, embedding=to_bytes(v))
-        for (s, t), v in zip(items, vectors)
-    )
-    return len(items)
+
+    vectors = embed_documents([text for _, text, _ in cleaned_items])
+
+    if len(vectors) != len(cleaned_items):
+        raise RetrievalError(
+            "Embedding failed for some chunks. Check GEMINI_EMBED_MODEL and the embedding service."
+        )
+
+    DocumentChunk.objects.bulk_create([
+        DocumentChunk(source=source, text=text, embedding=to_bytes(vector), source_url=source_url)
+        for (source, text, source_url),  vector in zip(cleaned_items, vectors)
+    ])
+    
+    return len(cleaned_items)
 
 
 
@@ -87,9 +102,13 @@ def retrieve_chunks(question: str, k: int) -> list[Chunk]:
 
         rows = DocumentChunk.objects.in_bulk(top_ids)
         return [
-            Chunk(text=rows[i].text, source=rows[i].source, score=float(scores[j]))
-            for j, i in zip(top, top_ids)
-            if i in rows  # J: row may have been deleted mid-request
+            Chunk(
+                text=rows[i].text,
+                source=rows[i].source,
+                score=float(scores[j]),
+                source_url=rows[i].source_url
+            )
+            for j, i in zip(top, top_ids) if i in rows
         ]
     except RetrievalError:
         raise
