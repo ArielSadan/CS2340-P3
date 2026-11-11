@@ -9,12 +9,13 @@ from dataclasses import dataclass, field
 from django.conf import settings
 from google.genai import types
 
+from . import grounding
 from .gemini import get_client
 from .retrieval import Chunk, RetrievalError, retrieve_chunks
 
 logger = logging.getLogger(__name__)
 
-NO_ANSWER_TOKEN = "NO_ANSWER"
+NO_ANSWER_TOKEN = grounding.NO_ANSWER_TOKEN
 
 ERROR_MESSAGE = (
     "I couldn't get an answer just now. Please wait a moment and press Send again. "
@@ -35,18 +36,18 @@ class ChatResult:
     status: str  # "ok" | "off_topic" | "error"
     sources: list = field(default_factory=list)
     latency_ms: int = 0
+    reason: str = ""
 
 
 def off_topic_message() -> str:
-    return (
-        f"I'm sorry, I can only help with questions about {settings.BOT_TOPIC_DESCRIPTION}. "
-        f"For example, you could ask: \"{settings.BOT_EXAMPLE_QUESTION}\""
+    return grounding.not_in_sources_message(
+        settings.BOT_TOPIC_DESCRIPTION, settings.BOT_EXAMPLE_QUESTION
     )
 
 
 def build_prompt(question: str, chunks: list[Chunk]) -> str:
     #J: Story #8 (dynamic prompts) plugs in here: pick a template by question intent.
-    context = "\n\n".join(f"[Source: {c.source}]\n{c.text}" for c in chunks)
+    context = grounding.format_context(chunks)
     return f"Context:\n{context}\n\nQuestion: {question}"
 
 
@@ -62,21 +63,21 @@ def _unique_sources(chunks: list[Chunk]) -> list[str]:
 def answer_question(question: str) -> ChatResult:
     start = time.monotonic()
 
-    def finish(answer, status, sources=None):
-        return ChatResult(answer, status, sources or [], int((time.monotonic() - start) * 1000))
+    def finish(answer, status, sources=None, reason=""):
+        return ChatResult(answer, status, sources or [], int((time.monotonic() - start) * 1000), reason)
 
     # 1. Retrieve
     try:
         chunks = retrieve_chunks(question, settings.RAG_TOP_K)
     except RetrievalError:
         logger.exception("Retrieval failed")
-        return finish(ERROR_MESSAGE, "error")
+        return finish(ERROR_MESSAGE, "error", reason="retrieval_error")
 
     # 2. Off-topic gate: nothing close enough -> don't call the LLM at all
     relevant = [c for c in chunks if c.score >= settings.RAG_MIN_SIMILARITY]
     if not relevant:
         logger.info("Off-topic (best score %.3f)", chunks[0].score if chunks else -1)
-        return finish(off_topic_message(), "off_topic")
+        return finish(off_topic_message(), "off_topic", reason="below_threshold" if chunks else "no_sources")
 
     # 3. Generate
     try:
@@ -84,19 +85,26 @@ def answer_question(question: str) -> ChatResult:
             model=settings.GEMINI_CHAT_MODEL,
             contents=build_prompt(question, relevant),
             config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_INSTRUCTION,
+                system_instruction=grounding.with_grounding_rules(SYSTEM_INSTRUCTION),
                 temperature=0.2,
             ),
         )
         text = (response.text or "").strip()
     except Exception:
         logger.exception("Gemini call failed")
-        return finish(ERROR_MESSAGE, "error")
+        return finish(ERROR_MESSAGE, "error", reason="llm_error")
 
     if not text:
-        return finish(ERROR_MESSAGE, "error")
+        return finish(ERROR_MESSAGE, "error", reason="empty_reply")
 
-    if text.startswith(NO_ANSWER_TOKEN):
-        return finish(off_topic_message(), "off_topic")
+    check = grounding.check_answer(
+        text, len(relevant), 
+        require_citations=getattr(settings, "GROUNDING_REQUIRE_CITATIONS", True),
+        )
 
-    return finish(text, "ok", _unique_sources(relevant))
+    if not check.ok:
+        logger.info("Not grounded (%s)", check.reason)
+        return finish(off_topic_message(), "off_topic", reason=check.reason)
+    
+    used = [relevant[n - 1] for n in check.cited] or relevant
+    return finish(grounding.add_disclaimer(check.text), "ok", _unique_sources(used), reason="answered")

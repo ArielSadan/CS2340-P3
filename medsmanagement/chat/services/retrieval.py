@@ -26,20 +26,26 @@ def to_bytes(vector) -> bytes:
 def from_bytes(blob) -> np.ndarray:
     return np.frombuffer(bytes(blob), dtype=np.float32)
 
+def _non_empty(items):
+    return [(s, t) for s, t in items if t and t.strip()]
 
-def add_chunks(items: list[tuple[str, str]]) -> int:
+def add_chunks(items: list[tuple[str, str]], document=None) -> int:
     """For ingestion teammates: items = [(source, text), ...]. Returns rows created."""
-    items = [(s, t) for s, t in items if t and t.strip()]
+    items = _non_empty(items)
     if not items:
         return 0
     vectors = embed_documents([t for _, t in items])
+    return store_chunks(items, vectors, document)
+
+def store_chunks(items, vectors, document=None) -> int:
+    items = _non_empty(items)
+    if len(items) != len(vectors):
+        raise ValueError("store_chunks needs one vector per non-empty chunk")
     DocumentChunk.objects.bulk_create(
-        DocumentChunk(source=s, text=t, embedding=to_bytes(v))
+        DocumentChunk(source=s, text=t, embedding=to_bytes(v), document=document)
         for (s, t), v in zip(items, vectors)
     )
     return len(items)
-
-
 
 _lock = threading.Lock()
 _index = {"version": None, "ids": None, "matrix": None}
