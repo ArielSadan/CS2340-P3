@@ -129,12 +129,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Set GEMINI_API_KEY in our environment. Without it the chat page still loads
 # but answers show the friendly error message.
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_CHAT_MODEL = os.environ.get("GEMINI_CHAT_MODEL", "gemini-2.5-flash")  # so our gemini-2.5-flash-lite
+GEMINI_CHAT_MODEL = os.environ.get("GEMINI_CHAT_MODEL", "gemini-3.1-flash-lite")
 GEMINI_EMBED_MODEL = "gemini-embedding-001"  # ingestion must use the same model
 LLM_TIMEOUT_SECONDS = 25
 
 RAG_TOP_K = 5
 RAG_MIN_SIMILARITY = 0.55  # tune with real on-topic / off-topic questions
+
+# Local preprocessing: about 4 characters per token, not an exact tokenizer.
+# Target ~600 tokens with ~90 tokens (15%) overlap; discard near-empty input.
+RAG_CHUNK_SIZE_CHARS = 2400
+RAG_CHUNK_OVERLAP_CHARS = 360
+RAG_MIN_CHUNK_CHARS = 80
 
 BOT_TOPIC_DESCRIPTION = "managing your medications"
 BOT_EXAMPLE_QUESTION = "What should I do if I miss a dose of my medicine?"

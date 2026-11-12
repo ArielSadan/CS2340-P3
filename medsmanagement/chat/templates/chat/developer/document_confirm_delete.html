@@ -1,0 +1,12 @@
+{% extends "chat/developer/base.html" %}
+{% block title %}Delete document{% endblock %}
+{% block heading %}Delete document{% endblock %}
+{% block content %}
+  <p>Delete <strong>{{ document.title }}</strong> and its {{ document.chunks.count }} chunk{{ document.chunks.count|pluralize }}?</p>
+  <p>The chatbot will stop using this document for new questions. You will need its text or original file to add it again.</p>
+  <form method="post" class="form-actions">
+    {% csrf_token %}
+    <button class="button--danger" type="submit">Delete document</button>
+    <a href="{% url 'chat:documents' %}">Cancel</a>
+  </form>
+{% endblock %}

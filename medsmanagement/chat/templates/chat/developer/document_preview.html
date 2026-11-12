@@ -1,0 +1,28 @@
+{% extends "chat/developer/base.html" %}
+{% block title %}Document preview{% endblock %}
+{% block heading %}Document preview{% endblock %}
+{% block content %}
+  <h2>{{ document.title }}</h2>
+  <p>These are the stored chunks currently used by the chatbot. Previewing does not call Gemini or change the knowledge base.</p>
+  <p>Source: {% firstof document.source_url document.file_name document.title %}</p>
+  <p>Date added: {{ document.ingested_at|date:"M j, Y" }}</p>
+  <p><a href="{% url 'chat:document_reingest' document.pk %}">Edit or re-ingest this document</a></p>
+  {% if document.cleaned_content %}
+    <details open>
+      <summary>Stored cleaned text</summary>
+      <pre class="preview-text">{{ document.cleaned_content }}</pre>
+    </details>
+  {% else %}
+    <p>Full cleaned text was not recorded for this import. Its stored chunks are shown below. Re-ingest it to run the full preprocessing step.</p>
+  {% endif %}
+  <h3>Stored chunks ({{ chunks|length }})</h3>
+  {% for chunk in chunks %}
+    <article class="preview-chunk">
+      <h4>Chunk {{ chunk.position }}</h4>
+      <p class="field__help">Title: {{ document.title }} · Source: {{ chunk.source }} · {{ chunk.text|length }} characters · Added {{ chunk.created_at|date:"M j, Y" }}</p>
+      <pre class="preview-text">{{ chunk.text }}</pre>
+    </article>
+  {% empty %}
+    <p>This document has no stored chunks. Re-ingest it to rebuild them.</p>
+  {% endfor %}
+{% endblock %}

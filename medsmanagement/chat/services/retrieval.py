@@ -2,9 +2,11 @@ import threading
 from dataclasses import dataclass
 
 import numpy as np
+from django.db import transaction
 from django.db.models import Count, Max
+from django.utils import timezone
 
-from chat.models import DocumentChunk
+from chat.models import Document, DocumentChunk
 
 from .gemini import embed_documents, embed_query
 
@@ -28,7 +30,8 @@ def from_bytes(blob) -> np.ndarray:
     return np.frombuffer(bytes(blob), dtype=np.float32)
 
 
-def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]]) -> int:
+def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]], document=None) -> int:
+    """Add chunks, or replace one document's chunks when document is supplied."""
     cleaned_items = []
     for item in items:
         source, text = item[:2]
@@ -47,10 +50,42 @@ def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]]) -> int:
             "Embedding failed for some chunks. Check GEMINI_EMBED_MODEL and the embedding service."
         )
 
-    DocumentChunk.objects.bulk_create([
+    # Embed before opening the transaction. A slow or failed API call should not
+    # lock SQLite or delete the document's existing knowledge.
+    rows = [
         DocumentChunk(source=source, text=text, embedding=to_bytes(vector), source_url=source_url)
-        for (source, text, source_url),  vector in zip(cleaned_items, vectors)
-    ])
+        for (source, text, source_url), vector in zip(cleaned_items, vectors)
+    ]
+
+    with transaction.atomic():
+        if document is not None:
+            document.ingested_at = timezone.now()
+            document.save()
+            document.chunks.all().delete()
+            for position, row in enumerate(rows, start=1):
+                row.document = document
+                row.position = position
+        else:
+            # Preserve teammates' existing add_chunks([(source, text), ...]) API.
+            # Those imports should also appear on the developer page.
+            grouped = {}
+            for row in rows:
+                grouped.setdefault((row.source, row.source_url), []).append(row)
+            for (source, url), source_rows in grouped.items():
+                imported, _ = Document.objects.get_or_create(
+                    title=source, source_url=url, defaults={"content": ""}
+                )
+                new_text = "\n\n".join(row.text for row in source_rows)
+                imported.content = "\n\n".join(filter(None, [imported.content, new_text]))
+                imported.cleaned_content = ""  # Appended chunks have no saved full-text cleaning snapshot.
+                imported.ingested_at = timezone.now()
+                imported.save()
+                last_position = imported.chunks.aggregate(last=Max("position"))["last"] or 0
+                for position, row in enumerate(source_rows, start=last_position + 1):
+                    row.document = imported
+                    row.position = position
+
+        DocumentChunk.objects.bulk_create(rows)
     
     return len(cleaned_items)
 
