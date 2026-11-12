@@ -1,0 +1,34 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Knowledge base{% endblock %} | Developer tools</title>
+  <link rel="stylesheet" href="{% static 'chat/chat.css' %}">
+  <link rel="stylesheet" href="{% static 'chat/developer.css' %}">
+</head>
+<body>
+  <main class="developer">
+    <header class="developer__header">
+      <div>
+        <p class="developer__eyebrow">Developer tools</p>
+        <h1>{% block heading %}Knowledge base{% endblock %}</h1>
+      </div>
+      <nav aria-label="Developer navigation">
+        <a href="{% url 'chat:page' %}">Chat</a>
+        <a href="{% url 'chat:documents' %}">Knowledge base</a>
+        <form method="post" action="{% url 'admin:logout' %}">
+          {% csrf_token %}
+          <button class="button--small" type="submit">Log out</button>
+        </form>
+      </nav>
+    </header>
+    {% if messages %}
+      <div aria-live="polite">
+        {% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,38 @@
+{% extends "chat/developer/base.html" %}
+{% block content %}
+  <p>Manage the documents used to answer medication questions. Saved changes apply to the next chat question.</p>
+  <div class="developer__toolbar">
+    <p>{{ documents|length }} document{{ documents|length|pluralize }}</p>
+    <a class="button" href="{% url 'chat:document_add' %}">Add document</a>
+  </div>
+  <div class="table-scroll" role="region" aria-label="Knowledge base documents" tabindex="0">
+    <table>
+      <caption class="sr-only">Documents in the chatbot knowledge base</caption>
+      <thead>
+        <tr><th scope="col">Title</th><th scope="col">Source type</th><th scope="col">URL / file name</th><th scope="col">Chunks</th><th scope="col">Date added</th><th scope="col">Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for document in documents %}
+          <tr>
+            <th scope="row">{{ document.title }}</th>
+            <td>{{ document.get_source_type_display }}</td>
+            <td class="document-source">
+              {% if document.source_url %}<a href="{{ document.source_url }}" target="_blank" rel="noopener noreferrer">{{ document.source_url }}<span class="sr-only"> (opens in a new tab)</span></a>{% endif %}
+              {% if document.file_name %}<span>{{ document.file_name }}</span>{% endif %}
+              {% if not document.source_url and not document.file_name %}Pasted text{% endif %}
+            </td>
+            <td>{{ document.chunk_count }}</td>
+            <td>{{ document.ingested_at|date:"M j, Y" }}</td>
+            <td class="document-actions">
+              <a href="{% url 'chat:document_preview' document.pk %}" aria-label="Preview {{ document.title }}">Preview</a>
+              <a href="{% url 'chat:document_reingest' document.pk %}" aria-label="Re-ingest {{ document.title }}">Re-ingest</a>
+              <a href="{% url 'chat:document_delete' document.pk %}" aria-label="Delete {{ document.title }}">Delete</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">No documents yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

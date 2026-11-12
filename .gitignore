@@ -19,3 +19,5 @@ htmlcov/
 .venv/
 venv/
 
+# Temporary workspace copies
+new-chat/
