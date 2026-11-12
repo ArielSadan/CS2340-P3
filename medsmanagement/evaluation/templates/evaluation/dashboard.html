@@ -1,0 +1,216 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RAG Accuracy Evaluation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f7fb;
+            color: #1f2937;
+            margin: 0;
+            padding: 35px;
+        }
+        main {
+            max-width: 1200px;
+            margin: auto;
+        }
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 22px;
+            margin: 20px 0;
+            border: 1px solid #e5e7eb;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        .stat {
+            background: #eff6ff;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .stat strong {
+            font-size: 28px;
+            display: block;
+            margin-top: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+        }
+        th { background: #f3f4f6; }
+        .pass { color: #15803d; font-weight: bold; }
+        .fail { color: #b91c1c; font-weight: bold; }
+        details { margin-top: 10px; }
+        summary { cursor: pointer; color: #2563eb; }
+        .answer {
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        a { color: #2563eb; }
+        .scroll { overflow-x: auto; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>RAG Accuracy Evaluation</h1>
+    <p>Golden test set results for the medication chatbot.</p>
+
+    <div class="card">
+        <h2>Previous Evaluation Runs</h2>
+        {% for run in runs %}
+            <p>
+                <a href="{% url 'evaluation:run_detail' run.id %}">
+                    Run #{{ run.id }}
+                </a>
+                — {{ run.created_at|date:"M d, Y H:i" }}
+                — {{ run.accuracy|floatformat:1 }}%
+            </p>
+        {% empty %}
+            <p>No evaluations have been run yet.</p>
+            <p>
+                Once documents and golden questions are ready,
+                run: <code>python manage.py run_evaluation</code>
+            </p>
+        {% endfor %}
+    </div>
+
+    {% if selected_run %}
+        <h2>Results — Run #{{ selected_run.id }}</h2>
+
+        <div class="stats">
+            <div class="stat">
+                Passed
+                <strong>
+                    {{ selected_run.passed }}/{{ selected_run.total }}
+                </strong>
+            </div>
+
+            <div class="stat">
+                Accuracy
+                <strong>
+                    {{ selected_run.accuracy|floatformat:1 }}%
+                </strong>
+            </div>
+
+            <div class="stat">
+                Source Hit Rate
+                <strong>
+                    {{ selected_run.source_hit_rate|floatformat:1 }}%
+                </strong>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Run Configuration</h3>
+            <p>Model: {{ selected_run.model_name }}</p>
+            <p>Similarity threshold:
+                {{ selected_run.similarity_threshold }}</p>
+            <p>Document chunks:
+                {{ selected_run.dataset_chunks }}</p>
+            <p>Test set hash:
+                <code>{{ selected_run.test_set_hash }}</code></p>
+            <p>Average latency:
+                {{ selected_run.average_latency_ms|floatformat:0 }} ms</p>
+        </div>
+
+        <div class="card scroll">
+            <h3>Individual Question Results</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Question</th>
+                        <th>Status</th>
+                        <th>Result</th>
+                        <th>Source Hit</th>
+                        <th>Latency</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                {% for result in results %}
+                    <tr>
+                        <td>{{ result.case_id }}</td>
+                        <td>
+                            {{ result.question }}
+
+                            <details>
+                                <summary>View full result</summary>
+
+                                <h4>Expected Answer</h4>
+                                <p>{{ result.expected_answer }}</p>
+
+                                <h4>Required Facts</h4>
+                                <p>{{ result.required_facts }}</p>
+
+                                <h4>Generated Answer</h4>
+                                <p class="answer">
+                                    {{ result.generated_answer }}
+                                </p>
+
+                                <h4>Expected Sources</h4>
+                                <ul>
+                                    {% for source in result.expected_sources %}
+                                        <li>{{ source }}</li>
+                                    {% empty %}
+                                        <li>None — decline case</li>
+                                    {% endfor %}
+                                </ul>
+
+                                <h4>Retrieved Sources</h4>
+                                <ul>
+                                    {% for source in result.retrieved_sources %}
+                                        <li>{{ source.title }}</li>
+                                    {% empty %}
+                                        <li>No sources</li>
+                                    {% endfor %}
+                                </ul>
+
+                                <h4>Scoring Notes</h4>
+                                <p>{{ result.reason }}</p>
+                            </details>
+                        </td>
+
+                        <td>{{ result.status }}</td>
+
+                        <td>
+                            {% if result.passed %}
+                                <span class="pass">PASS</span>
+                            {% else %}
+                                <span class="fail">FAIL</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if result.expected_status == "off_topic" %}
+                                N/A
+                            {% elif result.source_hit %}
+                                Yes
+                            {% else %}
+                                No
+                            {% endif %}
+                        </td>
+
+                        <td>{{ result.latency_ms }} ms</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</main>
+</body>
+</html>
