@@ -1,0 +1,108 @@
+{% load static %}{% comment %}
+  Story #6: Developer page for knowledge ingestion.
+  Reuses chat/chat.css (colors, font, buttons, dark mode) so it matches the chat
+  page. When the team adds a shared base template, switch to {% extends %}.
+{% endcomment %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Developer · Knowledge base</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'chat/chat.css' %}">
+  <link rel="stylesheet" href="{% static 'knowledge/developer.css' %}">
+</head>
+<body>
+  <main class="dev">
+    <header class="dev__header">
+      <h1>Knowledge base</h1>
+      <p>Add files and web pages for the chatbot to answer from.
+        <a href="{% url 'chat:page' %}">Open the chat</a></p>
+    </header>
+
+    {% if results %}
+    <section aria-labelledby="results-title">
+      <h2 id="results-title">Results</h2>
+      <div class="dev__table-wrap">
+        <table class="dev__table">
+          <thead><tr><th scope="col">Item</th><th scope="col">Status</th><th scope="col">Details</th></tr></thead>
+          <tbody>
+          {% for r in results %}
+            <tr>
+              <td class="dev__item">{{ r.item }}</td>
+              <td>
+                <span class="badge badge--{{ r.status }}">
+                  {% if r.status == "added" %}✓ Added{% elif r.status == "replaced" %}↻ Replaced{% elif r.status == "skipped" %}⏭ Skipped{% else %}✗ Error{% endif %}
+                </span>
+              </td>
+              <td>{% if r.title and r.status != "error" %}<strong>{{ r.title }}</strong><br>{% endif %}{{ r.message }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endif %}
+
+    <section aria-labelledby="add-title">
+      <h2 id="add-title">Add knowledge</h2>
+      <div class="dev__grid">
+        <form class="dev__card ingest-form" method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="upload">
+          <h3>Upload files</h3>
+          <p class="dev__hint">{{ allowed_extensions }} · up to {{ max_mb }} MB each · up to {{ max_items }} files at once</p>
+          <label for="files" class="dev__label">Files</label>
+          <input id="files" class="dev__file" type="file" name="files" accept="{{ accept }}" multiple required>
+          <button type="submit">Upload and add</button>
+        </form>
+
+        <form class="dev__card ingest-form" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="urls">
+          <h3>Add web pages</h3>
+          <p class="dev__hint">One link per line · up to {{ max_items }} at once. The main article text is used.
+            Pages that need a login can't be added; upload them as files instead.</p>
+          <label for="urls" class="dev__label">Links</label>
+          <textarea id="urls" class="dev__urls" name="urls" rows="5" required
+                    placeholder="https://pmc.ncbi.nlm.nih.gov/articles/…&#10;https://www.nia.nih.gov/health/…"></textarea>
+          <button type="submit">Fetch and add</button>
+        </form>
+      </div>
+    </section>
+
+    <section aria-labelledby="docs-title">
+      <h2 id="docs-title">In the knowledge base ({{ document_count }} document{{ document_count|pluralize }})</h2>
+      <div class="dev__table-wrap">
+        <table class="dev__table">
+          <thead><tr><th scope="col">Title</th><th scope="col">Source</th><th scope="col">Chunks</th><th scope="col" class="dev__hide-sm">Updated</th></tr></thead>
+          <tbody>
+          {% for d in documents %}
+            <tr>
+              <td>{% if d.source_url %}<a href="{{ d.source_url }}" target="_blank" rel="noopener">{{ d.title }}</a>{% else %}{{ d.title }}{% endif %}</td>
+              <td>{{ d.get_source_type_display }}</td>
+              <td>{{ d.chunk_total }}</td>
+              <td class="dev__hide-sm">{{ d.updated_at|date:"M j, Y g:i A" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4" class="dev__empty">Nothing added yet.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script>
+    // Fetching and embedding can take a while; show that the page is working.
+    document.querySelectorAll(".ingest-form").forEach(function (form) {
+      form.addEventListener("submit", function () {
+        var button = form.querySelector("button");
+        button.disabled = true;
+        button.textContent = "Working… this can take a minute";
+      });
+    });
+  </script>
+</body>
+</html>

@@ -29,6 +29,8 @@ def to_bytes(vector) -> bytes:
 def from_bytes(blob) -> np.ndarray:
     return np.frombuffer(bytes(blob), dtype=np.float32)
 
+def _non_empty(items):
+    return [(s, t) for s, t in items if t and t.strip()]
 
 def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]], document=None) -> int:
     """Add chunks, or replace one document's chunks when document is supplied."""
@@ -88,8 +90,6 @@ def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]], document=Non
         DocumentChunk.objects.bulk_create(rows)
     
     return len(cleaned_items)
-
-
 
 _lock = threading.Lock()
 _index = {"version": None, "ids": None, "matrix": None}
