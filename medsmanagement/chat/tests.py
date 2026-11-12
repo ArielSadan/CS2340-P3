@@ -43,7 +43,7 @@ class ChatApiTests(TestCase):
         data = self.ask("Will my bank ask for my PIN?").json()
         self.assertEqual(data["status"], "ok")
         self.assertIn("PIN", data["answer"])
-        self.assertEqual(data["sources"], ["fraud_guide.pdf"])
+        self.assertEqual(data["sources"], [{"title": "fraud_guide.pdf", "url": ""}],)
 
     @patch(f"{RAG}.get_client")
     @patch(f"{RAG}.retrieve_chunks")
@@ -80,6 +80,85 @@ class ChatApiTests(TestCase):
         self.assertEqual(res.status_code, 400)
         self.assertEqual(res.json()["answer"], "Please type a question first.")
 
+    @patch(f"{RAG}.get_client")
+    @patch(f"{RAG}.retrieve_chunks")
+    def test_sources_include_titles_urls_and_remove_duplicates(
+        self, mock_retrieve, mock_client
+    ):
+        url = "https://medlineplus.gov/druginformation.html"
+
+        mock_retrieve.return_value = [
+            Chunk("First passage.", "Medication Guide", 0.9, url),
+            Chunk("Second passage.", "Medication Guide", 0.8, url),
+            Chunk("Another passage.", "Facility Handbook", 0.7, ""),
+        ]
+        mock_client.return_value = self.fake_llm(
+            "Here is an explanation from the provided documents."
+        )
+
+        response = self.ask("Explain the medication information.")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["sources"],
+            [
+                {"title": "Medication Guide", "url": url},
+                {"title": "Facility Handbook", "url": ""},
+            ],
+        )
+
+    @patch(f"{RAG}.get_client")
+    @patch(f"{RAG}.retrieve_chunks")
+    def test_below_threshold_sources_are_excluded(
+        self, mock_retrieve, mock_client
+    ):
+        mock_retrieve.return_value = [
+            Chunk("Relevant passage.", "Relevant Guide", 0.9, ""),
+            Chunk("Unrelated passage.", "Unrelated Guide", 0.2, ""),
+        ]
+        mock_client.return_value = self.fake_llm(
+            "An answer from the relevant guide."
+        )
+
+        data = self.ask("Explain my medication instructions.").json()
+
+        self.assertEqual(data["status"], "ok")
+        self.assertEqual(
+            data["sources"],
+            [{"title": "Relevant Guide", "url": ""}],
+        )
+
+    @patch(f"{RAG}.get_client")
+    @patch(f"{RAG}.retrieve_chunks")
+    def test_sources_are_empty_when_llm_cannot_answer(
+        self, mock_retrieve, mock_client
+    ):
+        mock_retrieve.return_value = [
+            Chunk("Incomplete context.", "Medication Guide", 0.9, "")
+        ]
+        mock_client.return_value = self.fake_llm("NO_ANSWER")
+
+        data = self.ask("A question not answered by the document.").json()
+
+        self.assertEqual(data["status"], "off_topic")
+        self.assertEqual(data["sources"], [])
+
+    @patch(f"{RAG}.get_client")
+    @patch(f"{RAG}.retrieve_chunks")
+    def test_sources_are_empty_when_generation_fails(
+        self, mock_retrieve, mock_client
+    ):
+        mock_retrieve.return_value = [
+            Chunk("Some context.", "Medication Guide", 0.9, "")
+        ]
+        mock_client.return_value = self.fake_llm(
+            error=TimeoutError("timed out")
+        )
+
+        data = self.ask("Explain this information.").json()
+
+        self.assertEqual(data["status"], "error")
+        self.assertEqual(data["sources"], [])
 
 # SQLite retrieval
 
@@ -287,3 +366,31 @@ class GroundingApiTests(TestCase):
         self.assertEqual(result.status, "ok")
         self.assertTrue(result.answer.endswith(grounding.DISCLAIMER))
         self.assertEqual(result.sources, ["Metformin Guide", "Lisinopril Facts"])
+    @patch(f"{RET}.embed_query", side_effect=fake_embed)
+    def test_source_urls_survive_ingestion_and_retrieval(self, _):
+        url = "https://medlineplus.gov/druginformation.html"
+
+        self.add([
+            ("Medication Guide", "Information about a pill", url),
+            ("Older Document", "More pill information"),
+        ])
+
+        results = retrieval.retrieve_chunks("pill", k=2)
+        sources = {
+            chunk.source: chunk.source_url
+            for chunk in results
+        }
+
+        self.assertEqual(
+            sources,
+            {
+                "Medication Guide": url,
+                "Older Document": "",
+            },
+        )
+        self.assertEqual(
+            DocumentChunk.objects.get(
+                source="Medication Guide"
+            ).source_url,
+            url,
+        )

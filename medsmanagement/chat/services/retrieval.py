@@ -2,9 +2,11 @@ import threading
 from dataclasses import dataclass
 
 import numpy as np
+from django.db import transaction
 from django.db.models import Count, Max
+from django.utils import timezone
 
-from chat.models import DocumentChunk
+from chat.models import Document, DocumentChunk
 
 from .gemini import embed_documents, embed_query
 
@@ -14,6 +16,7 @@ class Chunk:
     text: str
     source: str
     score: float
+    source_url: str = ""
     
 class RetrievalError(Exception):
     """Raised when embedding or the database fails."""
@@ -29,23 +32,64 @@ def from_bytes(blob) -> np.ndarray:
 def _non_empty(items):
     return [(s, t) for s, t in items if t and t.strip()]
 
-def add_chunks(items: list[tuple[str, str]], document=None) -> int:
-    """For ingestion teammates: items = [(source, text), ...]. Returns rows created."""
-    items = _non_empty(items)
-    if not items:
-        return 0
-    vectors = embed_documents([t for _, t in items])
-    return store_chunks(items, vectors, document)
+def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]], document=None) -> int:
+    """Add chunks, or replace one document's chunks when document is supplied."""
+    cleaned_items = []
+    for item in items:
+        source, text = item[:2]
+        source_url = item[2] if len(item) == 3 else ""
 
-def store_chunks(items, vectors, document=None) -> int:
-    items = _non_empty(items)
-    if len(items) != len(vectors):
-        raise ValueError("store_chunks needs one vector per non-empty chunk")
-    DocumentChunk.objects.bulk_create(
-        DocumentChunk(source=s, text=t, embedding=to_bytes(v), document=document)
-        for (s, t), v in zip(items, vectors)
-    )
-    return len(items)
+        if text and text.strip():
+            cleaned_items.append((source, text.strip(), source_url))
+
+    if not cleaned_items:
+        return 0
+
+    vectors = embed_documents([text for _, text, _ in cleaned_items])
+
+    if len(vectors) != len(cleaned_items):
+        raise RetrievalError(
+            "Embedding failed for some chunks. Check GEMINI_EMBED_MODEL and the embedding service."
+        )
+
+    # Embed before opening the transaction. A slow or failed API call should not
+    # lock SQLite or delete the document's existing knowledge.
+    rows = [
+        DocumentChunk(source=source, text=text, embedding=to_bytes(vector), source_url=source_url)
+        for (source, text, source_url), vector in zip(cleaned_items, vectors)
+    ]
+
+    with transaction.atomic():
+        if document is not None:
+            document.ingested_at = timezone.now()
+            document.save()
+            document.chunks.all().delete()
+            for position, row in enumerate(rows, start=1):
+                row.document = document
+                row.position = position
+        else:
+            # Preserve teammates' existing add_chunks([(source, text), ...]) API.
+            # Those imports should also appear on the developer page.
+            grouped = {}
+            for row in rows:
+                grouped.setdefault((row.source, row.source_url), []).append(row)
+            for (source, url), source_rows in grouped.items():
+                imported, _ = Document.objects.get_or_create(
+                    title=source, source_url=url, defaults={"content": ""}
+                )
+                new_text = "\n\n".join(row.text for row in source_rows)
+                imported.content = "\n\n".join(filter(None, [imported.content, new_text]))
+                imported.cleaned_content = ""  # Appended chunks have no saved full-text cleaning snapshot.
+                imported.ingested_at = timezone.now()
+                imported.save()
+                last_position = imported.chunks.aggregate(last=Max("position"))["last"] or 0
+                for position, row in enumerate(source_rows, start=last_position + 1):
+                    row.document = imported
+                    row.position = position
+
+        DocumentChunk.objects.bulk_create(rows)
+    
+    return len(cleaned_items)
 
 _lock = threading.Lock()
 _index = {"version": None, "ids": None, "matrix": None}
@@ -93,9 +137,13 @@ def retrieve_chunks(question: str, k: int) -> list[Chunk]:
 
         rows = DocumentChunk.objects.in_bulk(top_ids)
         return [
-            Chunk(text=rows[i].text, source=rows[i].source, score=float(scores[j]))
-            for j, i in zip(top, top_ids)
-            if i in rows  # J: row may have been deleted mid-request
+            Chunk(
+                text=rows[i].text,
+                source=rows[i].source,
+                score=float(scores[j]),
+                source_url=rows[i].source_url
+            )
+            for j, i in zip(top, top_ids) if i in rows
         ]
     except RetrievalError:
         raise

@@ -1,0 +1,49 @@
+{% extends "chat/developer/base.html" %}
+{% block title %}{% if document %}Re-ingest document{% else %}Add document{% endif %}{% endblock %}
+{% block heading %}{% if document %}Re-ingest document{% else %}Add document{% endif %}{% endblock %}
+{% block content %}
+  {% if document %}
+    <p>Update the text or upload a replacement to refresh this document. Leaving the text unchanged rebuilds its existing knowledge. Old chunks stay available if ingestion fails.</p>
+  {% else %}
+    <p>Add an article or FDA document that belongs in your curated dataset.</p>
+  {% endif %}
+  <form method="post" enctype="multipart/form-data" class="document-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form.hidden_fields %}{{ field }}{{ field.errors }}{% endfor %}
+    {% for field in form.visible_fields %}
+      <div class="field">
+        {{ field.label_tag }}
+        {{ field }}
+        {% if field.help_text %}<p class="field__help">{{ field.help_text }}</p>{% endif %}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+    <div class="form-actions">
+      <button type="submit" name="action" value="preview">Preview cleaned text and chunks</button>
+      <button type="submit" name="action" value="ingest">{% if document %}Save and re-ingest{% else %}Add and ingest{% endif %}</button>
+      <a href="{% url 'chat:documents' %}">Cancel</a>
+    </div>
+    <p class="field__help">Ingestion uses Gemini and can take a moment. Up to 100,000 extracted characters per document. Uploads are converted to text; scanned PDFs need text extraction before uploading.</p>
+    <p class="field__help">Chunk target: {{ chunk_size }} characters. Overlap: {{ chunk_overlap }} characters, adjusted to word boundaries. Minimum: {{ chunk_minimum }} characters. Previewing does not call Gemini or save changes.</p>
+  </form>
+  {% if preview %}
+    <section class="document-preview" aria-label="Preprocessing preview">
+      <h2>Preview: {{ preview.document.title }}</h2>
+      <p>{{ preview.chunks|length }} proposed chunk{{ preview.chunks|length|pluralize }}. Nothing has been saved. Review below, then choose Add and ingest or Save and re-ingest.</p>
+      <p>Source: {% firstof preview.document.source_url preview.document.file_name preview.document.title %}</p>
+      <details open>
+        <summary>Cleaned text</summary>
+        <pre class="preview-text">{{ preview.cleaned_text }}</pre>
+      </details>
+      <h3>Proposed chunks</h3>
+      {% for text in preview.chunks %}
+        <article class="preview-chunk">
+          <h4>Chunk {{ forloop.counter }}</h4>
+          <p class="field__help">Title: {{ preview.document.title }} · {{ text|length }} characters · Not ingested yet</p>
+          <pre class="preview-text">{{ text }}</pre>
+        </article>
+      {% endfor %}
+    </section>
+  {% endif %}
+{% endblock %}
