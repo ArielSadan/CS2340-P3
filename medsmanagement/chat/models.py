@@ -28,21 +28,26 @@ class Document(models.Model):
         return self.title
 
 
-class DocumentChunk(models.Model):
-    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="chunks")
+
+    class DocumentChunk(models.Model):
+    document = models.ForeignKey(
+        Document, null=True, blank=True, on_delete=models.CASCADE, related_name="chunks",
+    )
     source = models.CharField(max_length=500)
     source_url = models.URLField(max_length=2000, blank=True, default="")
     text = models.TextField()
     position = models.PositiveIntegerField(default=1)
     embedding = models.BinaryField()
     created_at = models.DateTimeField(auto_now_add=True)
-    document = models.ForeignKey(
+    knowledge_document = models.ForeignKey(
         "knowledge.Document",
         null=True,
         blank=True,
         on_delete=models.CASCADE,
         related_name="chunks",
     )
-    
+
     def __str__(self):
         return f"{self.source} #{self.pk}"
+    
+

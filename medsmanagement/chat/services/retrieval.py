@@ -68,7 +68,6 @@ def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]], document=Non
                 row.document = document
                 row.position = position
         else:
-            # Preserve teammates' existing add_chunks([(source, text), ...]) API.
             # Those imports should also appear on the developer page.
             grouped = {}
             for row in rows:
@@ -90,6 +89,31 @@ def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]], document=Non
         DocumentChunk.objects.bulk_create(rows)
     
     return len(cleaned_items)
+
+
+def store_chunks(items, vectors, document) -> int:
+    """Save already-embedded chunks for a knowledge.Document (used by knowledge/ingestion/pipeline.py).
+
+    items = [(source, text), ...]; vectors = one embedding per item, same order.
+    Must be called inside the caller's transaction.
+    """
+    if len(items) != len(vectors):
+        raise RetrievalError("Embedding count doesn't match chunk count.")
+    rows = [
+        DocumentChunk(
+            source=source,
+            text=text,
+            embedding=to_bytes(vector),
+            source_url=document.source_url,
+            position=position,
+            knowledge_document=document,
+        )
+        for position, ((source, text), vector) in enumerate(zip(items, vectors), start=1)
+    ]
+    DocumentChunk.objects.bulk_create(rows)
+    return len(rows)
+
+
 
 _lock = threading.Lock()
 _index = {"version": None, "ids": None, "matrix": None}
