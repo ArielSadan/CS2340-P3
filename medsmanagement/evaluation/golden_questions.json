@@ -1,1 +1,218 @@
-[]
+
+[
+  {
+    "id": "Q01",
+    "question": "According to the NIH guide, what does polypharmacy mean?",
+    "expected_status": "ok",
+    "expected_answer": "Polypharmacy means using multiple medicines to treat diseases or other health conditions.",
+    "required_facts": [
+      ["multiple medicines", "multiple medications", "many medicines", "many medications", "several medicines", "multiple drugs", "many drugs"]
+    ],
+    "expected_sources": ["doc 1"],
+    "reference_page": 9
+  },
+  {
+    "id": "Q02",
+    "question": "When flying, should I put my medicines in checked luggage or carry them with me?",
+    "expected_status": "ok",
+    "expected_answer": "Carry medicines with you on the plane, rather than placing them in checked luggage.",
+    "required_facts": [
+      ["carry", "with you", "carry-on", "hand luggage", "hand baggage"],
+      ["checked luggage", "checked baggage", "checked bag", "hold luggage"]
+    ],
+    "expected_sources": ["doc 1"],
+    "reference_page": 6
+  },
+  {
+    "id": "Q03",
+    "question": "How are generic medicines similar to brand-name medicines, and how do their prices usually compare?",
+    "expected_status": "ok",
+    "expected_answer": "Generic and brand-name drugs contain the same active ingredients and work the same way. Generics are usually less expensive.",
+    "required_facts": [
+      ["same active ingredients", "same active ingredient", "identical active ingredients", "equivalent active ingredients"],
+      ["less expensive", "cheaper", "lower cost", "cost less", "less costly", "lower price"]
+    ],
+    "expected_sources": ["doc 1"],
+    "reference_page": 7
+  },
+  {
+    "id": "Q04",
+    "question": "Why can taking a sedative together with an antihistamine make driving unsafe?",
+    "expected_status": "ok",
+    "expected_answer": "That combination can slow your reactions and make driving or operating machinery dangerous.",
+    "required_facts": [
+      ["slow your reactions", "slow reactions", "slower reactions", "reaction time", "slower response", "drowsiness", "drowsy"],
+      ["driving", "drive", "machinery", "vehicle"]
+    ],
+    "expected_sources": ["doc 1"],
+    "reference_page": 2
+  },
+  {
+    "id": "Q05",
+    "question": "What are some tools the NIH guide suggests to help older adults remember to take medication on time?",
+    "expected_status": "ok",
+    "expected_answer": "Tools include charts, calendars, weekly pill boxes, timers, written reminders, and reminder apps.",
+    "required_facts": [
+      ["pill boxes", "pill box", "pillbox", "calendars", "calendar", "charts", "chart", "timers", "timer", "reminders", "reminder", "apps", "app", "alarms", "alarm"]
+    ],
+    "expected_sources": ["doc 1"],
+    "reference_page": 10
+  },
+  {
+    "id": "Q06",
+    "question": "According to the FDA, why can aging change how medicines are processed in the body?",
+    "expected_status": "ok",
+    "expected_answer": "With age, liver and kidney function can decline, changing how medicines break down and leave the body.",
+    "required_facts": [
+      ["liver", "kidney", "kidneys"],
+      ["break down", "processed", "process", "metabolized", "metabolised", "metabolism", "leave the body", "eliminated", "excreted", "cleared"]
+    ],
+    "expected_sources": ["doc 2"],
+    "reference_page": 1
+  },
+  {
+    "id": "Q07",
+    "question": "According to the FDA, where should most medicines be stored, including how to keep them away from children?",
+    "expected_status": "ok",
+    "expected_answer": "Most medicines should be kept in a cool, dry place, up and away from children. Some need refrigeration.",
+    "required_facts": [
+      ["cool", "dry"],
+      ["children", "child", "out of reach", "up and away", "locked"]
+    ],
+    "expected_sources": ["doc 2", "doc 1"],
+    "reference_page": 2
+  },
+  {
+    "id": "Q08",
+    "question": "Which fruit juice does the FDA specifically warn can interact with some medicines?",
+    "expected_status": "ok",
+    "expected_answer": "Grapefruit juice can interact with certain medicines.",
+    "required_facts": [
+      ["grapefruit"]
+    ],
+    "expected_sources": ["doc 2"],
+    "reference_page": 2
+  },
+  {
+    "id": "Q09",
+    "question": "Name a possible problem the FDA lists from taking some medicines with alcohol.",
+    "expected_status": "ok",
+    "expected_answer": "Some combinations can cause poor coordination, memory problems, sleepiness, or falls.",
+    "required_facts": [
+      ["coordination", "memory problems", "memory difficulty", "sleepiness", "sleepy", "drowsiness", "drowsy", "falls", "falling"]
+    ],
+    "expected_sources": ["doc 2"],
+    "reference_page": 2
+  },
+  {
+    "id": "Q10",
+    "question": "Why does the FDA say not to take someone else's prescription medicine?",
+    "expected_status": "ok",
+    "expected_answer": "It was not prescribed after considering your own conditions, allergies, and interactions, and can cause unexpected side effects, dangerous reactions, or addiction.",
+    "required_facts": [
+      ["side effects", "dangerous reactions", "dangerous reaction", "allergies", "drug interactions", "interactions", "addiction", "harmful", "unsafe"]
+    ],
+    "expected_sources": ["doc 2", "doc 1"],
+    "reference_page": 1
+  },
+  {
+    "id": "Q11",
+    "question": "In the health-literacy article, what does health literacy mean?",
+    "expected_status": "ok",
+    "expected_answer": "Health literacy is the ability to obtain, process, and understand health information to make appropriate health decisions.",
+    "required_facts": [
+      ["health information", "medical information", "healthcare information", "health care information"],
+      ["understand", "understanding", "comprehend", "interpret"]
+    ],
+    "expected_sources": ["doc 3"],
+    "reference_page": 2
+  },
+  {
+    "id": "Q12",
+    "question": "What is the teach-back method described in the health-literacy article?",
+    "expected_status": "ok",
+    "expected_answer": "A clinician asks the patient to repeat or explain the important information back in their own words, and clarifies anything misunderstood.",
+    "required_facts": [
+      ["repeat", "restate", "explain back", "say back", "tell back", "describe back"],
+      ["own words", "their words", "patient's words"]
+    ],
+    "expected_sources": ["doc 3"],
+    "reference_page": 5
+  },
+  {
+    "id": "Q13",
+    "question": "What two improvements to medication labels does the health-literacy article suggest for dosing times and readability?",
+    "expected_status": "ok",
+    "expected_answer": "Write explicit or specific dosing times, and make important information such as the drug name and dose clear with large font or highlighting.",
+    "required_facts": [
+      ["specific times", "specific timings", "exact times", "explicit times", "clear times", "times of day", "time of day", "specific time"],
+      ["large font", "large print", "larger font", "larger text", "large text", "highlight", "underlined", "bold"]
+    ],
+    "expected_sources": ["doc 3"],
+    "reference_page": 5
+  },
+  {
+    "id": "Q14",
+    "question": "What is the 'My Medication Passport' described in the health-literacy article?",
+    "expected_status": "ok",
+    "expected_answer": "It is a pocket-sized booklet for recording a patient's medication list and helping share or discuss medicine information with health professionals and caregivers.",
+    "required_facts": [
+      ["booklet", "pocket-sized", "pocket sized", "passport"],
+      ["medication list", "medicine list", "medication information", "medicines", "record medications", "record medicines", "keep track"]
+    ],
+    "expected_sources": ["doc 3"],
+    "reference_page": 5
+  },
+  {
+    "id": "Q15",
+    "question": "What single screening question about medical forms does the health-literacy article recommend asking older patients?",
+    "expected_status": "ok",
+    "expected_answer": "How confident are you filling out medical forms by yourself?",
+    "required_facts": [
+      ["confident", "confidence"],
+      ["medical forms", "forms"]
+    ],
+    "expected_sources": ["doc 3"],
+    "reference_page": 4
+  },
+  {
+    "id": "Q16",
+    "question": "Who won the most recent Formula 1 race?",
+    "expected_status": "off_topic",
+    "expected_answer": "Decline: the documents do not contain Formula 1 race results.",
+    "required_facts": [],
+    "expected_sources": []
+  },
+  {
+    "id": "Q17",
+    "question": "What will the temperature in Atlanta be tomorrow afternoon?",
+    "expected_status": "off_topic",
+    "expected_answer": "Decline: the documents do not contain local weather forecasts.",
+    "required_facts": [],
+    "expected_sources": []
+  },
+  {
+    "id": "Q18",
+    "question": "What is the chemical formula of metformin?",
+    "expected_status": "off_topic",
+    "expected_answer": "Decline: the three documents do not give metformin's chemical formula.",
+    "required_facts": [],
+    "expected_sources": []
+  },
+  {
+    "id": "Q19",
+    "question": "What was the result of my most recent blood test?",
+    "expected_status": "off_topic",
+    "expected_answer": "Decline: the knowledge base does not contain this patient's blood test results.",
+    "required_facts": [],
+    "expected_sources": []
+  },
+  {
+    "id": "Q20",
+    "question": "What is the manufacturer's lot number printed on my own bottle of lisinopril?",
+    "expected_status": "off_topic",
+    "expected_answer": "Decline: the knowledge base cannot determine a lot number on a personal prescription bottle.",
+    "required_facts": [],
+    "expected_sources": []
+  }
+]
