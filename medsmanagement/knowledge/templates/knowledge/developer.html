@@ -18,10 +18,16 @@
   <main class="dev">
     <header class="dev__header">
       <h1>Knowledge base</h1>
-      <p>Add files and web pages for the chatbot to answer from.
-        <a href="{% url 'chat:document_add' %}">Paste text instead</a> ·
+      <p>Add files, web pages or text for the chatbot to answer from. Each item opens on a
+        review form so you can check it before it's added.
         <a href="{% url 'chat:page' %}">Open the chat</a></p>
     </header>
+
+    {% if messages %}
+    <section aria-live="polite">
+      {% for message in messages %}<p class="badge dev__message badge--{% if message.level_tag == 'success' %}added{% elif message.level_tag == 'warning' or message.level_tag == 'error' %}error{% else %}skipped{% endif %}">{{ message }}</p>{% endfor %}
+    </section>
+    {% endif %}
 
     {% if results %}
     <section aria-labelledby="results-title">
@@ -57,7 +63,7 @@
           <p class="dev__hint">{{ allowed_extensions }} · up to {{ max_mb }} MB each · up to {{ max_items }} files at once</p>
           <label for="files" class="dev__label">Files</label>
           <input id="files" class="dev__file" type="file" name="files" accept="{{ accept }}" multiple required>
-          <button type="submit">Upload and add</button>
+          <button type="submit">Upload and review</button>
         </form>
 
         <form class="dev__card ingest-form" method="post">
@@ -69,7 +75,21 @@
           <label for="urls" class="dev__label">Links</label>
           <textarea id="urls" class="dev__urls" name="urls" rows="5" required
                     placeholder="https://pmc.ncbi.nlm.nih.gov/articles/…&#10;https://www.nia.nih.gov/health/…"></textarea>
-          <button type="submit">Fetch and add</button>
+          <button type="submit">Fetch and review</button>
+        </form>
+
+        <form class="dev__card ingest-form" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="text">
+          <h3>Paste text</h3>
+          <p class="dev__hint">For text you can't upload as a file. The link is optional and is shown as the citation.</p>
+          <label for="text-title" class="dev__label">Title</label>
+          <input id="text-title" class="dev__file" type="text" name="title" maxlength="500" required>
+          <label for="text-url" class="dev__label">Link (optional)</label>
+          <input id="text-url" class="dev__file" type="url" name="source_url" maxlength="2000">
+          <label for="text-body" class="dev__label">Text</label>
+          <textarea id="text-body" class="dev__urls" name="text" rows="5" required></textarea>
+          <button type="submit">Review text</button>
         </form>
       </div>
     </section>

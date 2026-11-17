@@ -114,3 +114,6 @@ a:focus-visible { outline: 4px solid var(--focus); outline-offset: 2px; }
   .dev__hide-sm { display: none; }
   .dev__card button { align-self: stretch; }
 }
+
+/* Messages from the review form (added, skipped, problems with other items) */
+.dev__message { display: block; border-radius: .5rem; padding: .6rem 1rem; margin: 0 0 .5rem; }

@@ -1,8 +1,13 @@
 {% extends "chat/developer/base.html" %}
-{% block title %}{% if document %}Re-ingest document{% else %}Add document{% endif %}{% endblock %}
-{% block heading %}{% if document %}Re-ingest document{% else %}Add document{% endif %}{% endblock %}
+{% block title %}{% if review %}Review document{% elif document %}Re-ingest document{% else %}Add document{% endif %}{% endblock %}
+{% block heading %}{% if review %}Review document {{ review.position }} of {{ review.total }}{% elif document %}Re-ingest document{% else %}Add document{% endif %}{% endblock %}
 {% block content %}
-  {% if document %}
+  {% if review %}
+    <p>Read from <strong>{{ review.item }}</strong>. Check the title, source type, link and text (fix anything the extraction got wrong), preview the chunks if you like, then add it.</p>
+    {% if review.replacing %}
+      <p class="notice">This replaces “{{ review.replacing.title }}”, which is already in the knowledge base. Its old chunks are kept if ingestion fails.</p>
+    {% endif %}
+  {% elif document %}
     <p>Update the text or upload a replacement to refresh this document. Leaving the text unchanged rebuilds its existing knowledge. Old chunks stay available if ingestion fails.</p>
   {% else %}
     <p>Add an article or FDA document that belongs in your curated dataset.</p>
@@ -22,7 +27,12 @@
     <div class="form-actions">
       <button type="submit" name="action" value="preview">Preview cleaned text and chunks</button>
       <button type="submit" name="action" value="ingest">{% if document %}Save and re-ingest{% else %}Add and ingest{% endif %}</button>
-      <a href="{% url 'knowledge:developer' %}">Cancel</a>
+      {% if review %}
+        <button type="submit" name="action" value="skip" formnovalidate>Skip this one</button>
+        <button type="submit" name="action" value="cancel" formnovalidate>Cancel{% if review.total > 1 %} all{% endif %}</button>
+      {% else %}
+        <a href="{% url 'knowledge:developer' %}">Cancel</a>
+      {% endif %}
     </div>
     <p class="field__help">Ingestion uses Gemini and can take a moment. Up to 100,000 extracted characters per document. Uploads are converted to text; scanned PDFs need text extraction before uploading.</p>
     <p class="field__help">Chunk target: {{ chunk_size }} characters. Overlap: {{ chunk_overlap }} characters, adjusted to word boundaries. Minimum: {{ chunk_minimum }} characters. Previewing does not call Gemini or save changes.</p>
