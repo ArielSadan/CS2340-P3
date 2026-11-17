@@ -39,15 +39,6 @@ class DocumentChunk(models.Model):
     position = models.PositiveIntegerField(default=1)
     embedding = models.BinaryField()
     created_at = models.DateTimeField(auto_now_add=True)
-    knowledge_document = models.ForeignKey(
-        "knowledge.Document",
-        null=True,
-        blank=True,
-        on_delete=models.CASCADE,
-        related_name="chunks",
-    )
 
     def __str__(self):
         return f"{self.source} #{self.pk}"
-    
-

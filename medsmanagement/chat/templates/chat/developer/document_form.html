@@ -22,7 +22,7 @@
     <div class="form-actions">
       <button type="submit" name="action" value="preview">Preview cleaned text and chunks</button>
       <button type="submit" name="action" value="ingest">{% if document %}Save and re-ingest{% else %}Add and ingest{% endif %}</button>
-      <a href="{% url 'chat:documents' %}">Cancel</a>
+      <a href="{% url 'knowledge:developer' %}">Cancel</a>
     </div>
     <p class="field__help">Ingestion uses Gemini and can take a moment. Up to 100,000 extracted characters per document. Uploads are converted to text; scanned PDFs need text extraction before uploading.</p>
     <p class="field__help">Chunk target: {{ chunk_size }} characters. Overlap: {{ chunk_overlap }} characters, adjusted to word boundaries. Minimum: {{ chunk_minimum }} characters. Previewing does not call Gemini or save changes.</p>

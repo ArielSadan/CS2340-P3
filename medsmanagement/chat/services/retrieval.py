@@ -1,7 +1,10 @@
+import logging
 import threading
+import time
 from dataclasses import dataclass
 
 import numpy as np
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Max
 from django.utils import timezone
@@ -10,6 +13,11 @@ from chat.models import Document, DocumentChunk
 
 from .gemini import embed_documents, embed_query
 
+logger = logging.getLogger(__name__)
+
+# Seconds to wait between retries when Gemini's free tier says "too many requests".
+DEFAULT_EMBED_RETRY_DELAYS = [2, 5, 10, 20]
+
 
 @dataclass
 class Chunk:
@@ -17,7 +25,8 @@ class Chunk:
     source: str
     score: float
     source_url: str = ""
-    
+
+
 class RetrievalError(Exception):
     """Raised when embedding or the database fails."""
 
@@ -29,8 +38,26 @@ def to_bytes(vector) -> bytes:
 def from_bytes(blob) -> np.ndarray:
     return np.frombuffer(bytes(blob), dtype=np.float32)
 
-def _non_empty(items):
-    return [(s, t) for s, t in items if t and t.strip()]
+
+def is_rate_limit(exc):
+    text = str(exc)
+    return getattr(exc, "code", None) == 429 or "RESOURCE_EXHAUSTED" in text or " 429" in text
+
+
+def embed_with_retries(texts):
+    """Long documents hit Gemini's free-tier rate limit quickly, so wait and
+    retry on 429s. Any other error is raised straight away."""
+    delays = getattr(settings, "EMBED_RETRY_DELAYS", DEFAULT_EMBED_RETRY_DELAYS)
+    for attempt in range(len(delays) + 1):
+        try:
+            return embed_documents(texts)
+        except Exception as exc:  # the Gemini SDK raises several error types
+            if is_rate_limit(exc) and attempt < len(delays):
+                logger.warning("Gemini rate limit while embedding; retrying in %ss", delays[attempt])
+                time.sleep(delays[attempt])
+                continue
+            raise
+
 
 def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]], document=None) -> int:
     """Add chunks, or replace one document's chunks when document is supplied."""
@@ -45,7 +72,7 @@ def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]], document=Non
     if not cleaned_items:
         return 0
 
-    vectors = embed_documents([text for _, text, _ in cleaned_items])
+    vectors = embed_with_retries([text for _, text, _ in cleaned_items])
 
     if len(vectors) != len(cleaned_items):
         raise RetrievalError(
@@ -87,32 +114,8 @@ def add_chunks(items: list[tuple[str, str] | tuple[str, str, str]], document=Non
                     row.position = position
 
         DocumentChunk.objects.bulk_create(rows)
-    
+
     return len(cleaned_items)
-
-
-def store_chunks(items, vectors, document) -> int:
-    """Save already-embedded chunks for a knowledge.Document (used by knowledge/ingestion/pipeline.py).
-
-    items = [(source, text), ...]; vectors = one embedding per item, same order.
-    Must be called inside the caller's transaction.
-    """
-    if len(items) != len(vectors):
-        raise RetrievalError("Embedding count doesn't match chunk count.")
-    rows = [
-        DocumentChunk(
-            source=source,
-            text=text,
-            embedding=to_bytes(vector),
-            source_url=document.source_url,
-            position=position,
-            knowledge_document=document,
-        )
-        for position, ((source, text), vector) in enumerate(zip(items, vectors), start=1)
-    ]
-    DocumentChunk.objects.bulk_create(rows)
-    return len(rows)
-
 
 
 _lock = threading.Lock()

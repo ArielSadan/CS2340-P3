@@ -1,5 +1,5 @@
 Developer knowledge-base management: see DEVELOPER_SETUP.md for setup and tests.
-Page: /chat/developer/ (staff login required).
+Page: /developer/knowledge/ (staff login required). /chat/developer/ redirects there.
 
 Joud on 11/10/26 at 3:05PM
 My story (#2, asking questions in the chat) is in the repo. It's a new Django app at medsmanagement/chat/ and the page is at /chat/. TLDR:

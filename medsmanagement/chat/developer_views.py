@@ -1,8 +1,9 @@
+"""Per-document pages linked from the Developer page (/developer/knowledge/):
+add pasted text, preview, re-ingest and delete."""
 import logging
 
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
-from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_GET, require_http_methods
 
@@ -12,13 +13,6 @@ from .services.ingestion import ingest_document
 from .services.preprocessing import chunk_settings, preprocess_text
 
 logger = logging.getLogger(__name__)
-
-
-@staff_member_required
-@require_GET
-def documents(request):
-    documents = Document.objects.annotate(chunk_count=Count("chunks"))
-    return render(request, "chat/developer/documents.html", {"documents": documents})
 
 
 @staff_member_required
@@ -47,7 +41,7 @@ def document_edit(request, pk=None):
             else:
                 count = ingest_document(updated)
                 messages.success(request, f'"{updated.title}" ingested successfully ({count} chunks).')
-                return redirect("chat:documents")
+                return redirect("knowledge:developer")
         except ValueError as exc:
             form.add_error(None, str(exc))
         except Exception:
@@ -78,5 +72,5 @@ def document_delete(request, pk):
         title = document.title
         document.delete()  # The foreign key also deletes this document's chunks.
         messages.success(request, f'"{title}" and its chunks were deleted.')
-        return redirect("chat:documents")
+        return redirect("knowledge:developer")
     return render(request, "chat/developer/document_confirm_delete.html", {"document": document})

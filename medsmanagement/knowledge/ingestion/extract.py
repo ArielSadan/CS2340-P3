@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from ..conf import get_setting
 from .errors import NoReadableText, PrivatePage, UnsupportedFile
  
-ALLOWED_EXTENSIONS = {".pdf", ".txt", ".md", ".docx"}
+ALLOWED_EXTENSIONS = {".pdf", ".txt", ".md", ".docx", ".csv", ".json", ".html", ".htm"}
 
 # ---------------------------------------------------------------- pages
 
@@ -70,7 +70,7 @@ def extract_upload(filename, data):
     ext = os.path.splitext(filename)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise UnsupportedFile(
-            f"Unsupported file type ({ext or 'no extension'}). Use PDF, TXT, MD or DOCX."
+            f"Unsupported file type ({ext or 'no extension'}). Use PDF, TXT, MD, DOCX, CSV, JSON or HTML."
         )
     if not data:
         raise NoReadableText("This file is empty.")
@@ -78,6 +78,11 @@ def extract_upload(filename, data):
         return extract_pdf(data, filename)
     if ext == ".docx":
         return extract_docx(data, filename)
+    if ext in (".html", ".htm"):
+        extracted = extract_html(_decode_text(data))
+        if extracted.title == "Web page":  # page had no <title> or <h1>
+            extracted.title = _clip(_pretty_name(filename))
+        return extracted
     return extract_text_file(data, filename, markdown=(ext == ".md"))
  
  

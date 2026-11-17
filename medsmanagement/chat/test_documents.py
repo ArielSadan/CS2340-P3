@@ -48,7 +48,7 @@ class DeveloperDocumentTests(TestCase):
     def test_anonymous_and_regular_users_cannot_access_document_actions(self):
         document = self.make_document()
         endpoints = [
-            reverse("chat:documents"), reverse("chat:document_add"),
+            reverse("knowledge:developer"), reverse("chat:document_add"),
             reverse("chat:document_reingest", args=[document.pk]),
             reverse("chat:document_delete", args=[document.pk]),
         ]
@@ -75,15 +75,15 @@ class DeveloperDocumentTests(TestCase):
         document.source_url = "https://example.org/guide"
         document.file_name = "guide.txt"
         document.save()
-        response = self.client.get(reverse("chat:documents"))
-        for text in ["Medication guide", "Article", "https://example.org/guide", "guide.txt", "Date added", "Re-ingest", "Delete"]:
+        response = self.client.get(reverse("knowledge:developer"))
+        for text in ["Medication guide", "Article", "https://example.org/guide", "guide.txt", "Updated", "Re-ingest", "Delete"]:
             self.assertContains(response, text)
-        self.assertEqual(response.context["documents"][0].chunk_count, 1)
+        self.assertEqual(response.context["documents"][0].chunk_total, 1)
         self.assertContains(self.client.get(reverse("chat:page")), "Developer tools")
 
     def test_add_text_document_creates_linked_chunks_and_citations(self):
         response = self.client.post(reverse("chat:document_add"), self.form_data())
-        self.assertRedirects(response, reverse("chat:documents"))
+        self.assertRedirects(response, reverse("knowledge:developer"))
         document = Document.objects.get()
         chunk = document.chunks.get()
         self.assertEqual(document.source_type, "article")
@@ -98,7 +98,7 @@ class DeveloperDocumentTests(TestCase):
                 response = self.client.post(reverse("chat:document_add"), self.form_data(
                     title=f"FDA {extension}", source_type="fda", upload=upload,
                 ))
-                self.assertRedirects(response, reverse("chat:documents"))
+                self.assertRedirects(response, reverse("knowledge:developer"))
                 document = Document.objects.get(title=f"FDA {extension}")
                 self.assertEqual(document.content, "FDA pill information")
                 self.assertEqual(document.file_name, f"fda.{extension}")
@@ -110,7 +110,7 @@ class DeveloperDocumentTests(TestCase):
         mock_reader.return_value.pages = [MagicMock(extract_text=lambda: "FDA pill information")]
         upload = SimpleUploadedFile("guide.pdf", b"pdf test input")
         response = self.client.post(reverse("chat:document_add"), self.form_data(content="", upload=upload))
-        self.assertRedirects(response, reverse("chat:documents"))
+        self.assertRedirects(response, reverse("knowledge:developer"))
         self.assertEqual(Document.objects.get().content, "FDA pill information")
 
     def test_missing_content_and_unsafe_citation_url_are_rejected(self):
@@ -158,7 +158,7 @@ class DeveloperDocumentTests(TestCase):
         response = self.client.post(reverse("chat:document_reingest", args=[document.pk]), self.form_data(
             title="Updated guide", source_url="https://example.org/updated", content="Updated scam information.",
         ))
-        self.assertRedirects(response, reverse("chat:documents"))
+        self.assertRedirects(response, reverse("knowledge:developer"))
         document.refresh_from_db()
         self.assertFalse(DocumentChunk.objects.filter(pk=old_id).exists())
         self.assertEqual(document.chunks.count(), 1)
@@ -175,7 +175,7 @@ class DeveloperDocumentTests(TestCase):
         response = self.client.get(reverse("chat:document_reingest", args=[document.pk]))
         self.assertEqual(response.context["form"].initial["content"], document.content)
         response = self.client.post(reverse("chat:document_reingest", args=[document.pk]), self.form_data(source_url=""))
-        self.assertRedirects(response, reverse("chat:documents"))
+        self.assertRedirects(response, reverse("knowledge:developer"))
         self.assertEqual(document.chunks.count(), 1)
 
     def test_failed_embedding_preserves_old_document_and_chunks(self):
@@ -220,7 +220,7 @@ class DeveloperDocumentTests(TestCase):
             retrieval.retrieve_chunks("pill", k=5)
             response = self.client.post(url)
             results = retrieval.retrieve_chunks("pill", k=5)
-        self.assertRedirects(response, reverse("chat:documents"))
+        self.assertRedirects(response, reverse("knowledge:developer"))
         self.assertFalse(Document.objects.filter(pk=document.pk).exists())
         self.assertEqual(DocumentChunk.objects.count(), 1)
         self.assertEqual([chunk.source for chunk in results], [other.title])
@@ -231,11 +231,15 @@ class DeveloperDocumentTests(TestCase):
         self.assertEqual(document.chunks.count(), 2)
         self.assertIn("First pill passage.", document.content)
         self.assertIn("Second pill passage.", document.content)
-        self.assertContains(self.client.get(reverse("chat:documents")), "Old source")
+        self.assertContains(self.client.get(reverse("knowledge:developer")), "Old source")
 
 
 class DocumentMigrationTests(TransactionTestCase):
     def test_existing_chunks_are_preserved_and_grouped_by_source_and_url(self):
+        # Go back to 0001 first: chat has two 0002 branches, and the other one
+        # (0002_documentchunk_document) must be unapplied too.
+        executor = MigrationExecutor(connection)
+        executor.migrate([("chat", "0001_initial")])
         executor = MigrationExecutor(connection)
         executor.migrate([("chat", "0002_documentchunk_source_url")])
         old_apps = executor.loader.project_state([("chat", "0002_documentchunk_source_url")]).apps
