@@ -28,6 +28,7 @@ class Document(models.Model):
         return self.title
 
 
+
 class DocumentChunk(models.Model):
     document = models.ForeignKey(
         Document, null=True, blank=True, on_delete=models.CASCADE, related_name="chunks",
