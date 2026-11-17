@@ -444,16 +444,98 @@ class DeveloperPageTests(KnowledgeTestCase):
         self.client.force_login(self.staff)
         self.assertEqual(self.client.get(self.url).status_code, 200)
  
-    def test_upload_reports_each_item(self):
+    def review_data(self, **changes):
+        data = {"action": "ingest", "title": "metformin", "source_type": "other",
+                "source_url": "", "content": METFORMIN, "file_name": "metformin.txt"}
+        data.update(changes)
+        return data
+
+    def test_upload_opens_the_review_form_filled_in(self):
         self.client.force_login(self.staff)
         response = self.client.post(self.url, {
             "action": "upload",
             "files": [upload("metformin.txt", METFORMIN), SimpleUploadedFile("scan.exe", b"MZ")],
-        })
-        self.assertContains(response, "✓ Added")
-        self.assertContains(response, "Unsupported file type (.exe)")
-        self.assertContains(response, "In the knowledge base (1 document)")
- 
+        }, follow=True)
+        self.assertRedirects(response, reverse("chat:document_review"))
+        self.assertContains(response, "Review document 1 of 1")
+        self.assertContains(response, "Unsupported file type (.exe)")  # the other item's problem
+        form = response.context["form"]
+        self.assertEqual(form["title"].value(), "metformin")
+        self.assertEqual(form["content"].value(), METFORMIN)
+        self.assertEqual(form["file_name"].value(), "metformin.txt")
+        self.assertFalse(Document.objects.exists())  # nothing saved before review
+        self.embed.assert_not_called()
+
+    def test_reviewed_draft_is_ingested_with_the_developers_edits(self):
+        self.client.force_login(self.staff)
+        self.client.post(self.url, {"action": "upload", "files": [upload("metformin.txt", METFORMIN)]})
+        response = self.client.post(reverse("chat:document_review"),
+                                    self.review_data(title="Metformin guide", source_type="fda"), follow=True)
+        self.assertRedirects(response, self.url)
+        self.assertContains(response, "ingested successfully")
+        doc = Document.objects.get()
+        self.assertEqual((doc.title, doc.source_type, doc.file_name), ("Metformin guide", "fda", "metformin.txt"))
+        self.assertEqual(DocumentChunk.objects.get().source, "Metformin guide")
+
+    def test_preview_on_review_saves_nothing(self):
+        self.client.force_login(self.staff)
+        self.client.post(self.url, {"action": "upload", "files": [upload("metformin.txt", METFORMIN)]})
+        response = self.client.post(reverse("chat:document_review"), self.review_data(action="preview"))
+        self.assertContains(response, "Proposed chunks")
+        self.assertFalse(Document.objects.exists())
+
+    def test_several_items_are_reviewed_one_after_another(self):
+        self.client.force_login(self.staff)
+        self.client.post(self.url, {"action": "upload", "files": [
+            upload("metformin.txt", METFORMIN), upload("lisinopril.txt", LISINOPRIL)]})
+        review = reverse("chat:document_review")
+        self.assertContains(self.client.get(review), "Review document 1 of 2")
+        response = self.client.post(review, self.review_data())
+        self.assertRedirects(response, review)
+        response = self.client.get(review)
+        self.assertContains(response, "Review document 2 of 2")
+        self.assertEqual(response.context["form"]["title"].value(), "lisinopril")
+        response = self.client.post(review, {"action": "skip"})
+        self.assertRedirects(response, self.url)
+        self.assertEqual(list(Document.objects.values_list("title", flat=True)), ["metformin"])
+
+    def test_cancel_drops_the_remaining_items(self):
+        self.client.force_login(self.staff)
+        self.client.post(self.url, {"action": "upload", "files": [
+            upload("metformin.txt", METFORMIN), upload("lisinopril.txt", LISINOPRIL)]})
+        response = self.client.post(reverse("chat:document_review"), {"action": "cancel"})
+        self.assertRedirects(response, self.url)
+        self.assertRedirects(self.client.get(reverse("chat:document_review")), self.url)
+        self.assertFalse(Document.objects.exists())
+
+    def test_new_version_of_a_file_is_reviewed_as_a_replacement(self):
+        ingest_uploaded_file(upload("metformin.txt", METFORMIN))
+        old = Document.objects.get()
+        self.client.force_login(self.staff)
+        self.client.post(self.url, {"action": "upload", "files": [upload("metformin.txt", METFORMIN + " New warning added.")]})
+        response = self.client.get(reverse("chat:document_review"))
+        self.assertContains(response, "This replaces")
+        self.client.post(reverse("chat:document_review"), self.review_data(content=METFORMIN + " New warning added."))
+        self.assertEqual(Document.objects.get().pk, old.pk)
+        self.assertIn("New warning", " ".join(DocumentChunk.objects.values_list("text", flat=True)))
+
+    def test_identical_content_is_skipped_without_review(self):
+        ingest_uploaded_file(upload("metformin.txt", METFORMIN))
+        self.client.force_login(self.staff)
+        response = self.client.post(self.url, {"action": "upload", "files": [upload("copy.txt", METFORMIN)]})
+        self.assertEqual(response.status_code, 200)  # stays on the page
+        self.assertContains(response, "⏭ Skipped")
+
+    def test_pasted_text_opens_the_same_review_form(self):
+        self.client.force_login(self.staff)
+        response = self.client.post(self.url, {"action": "text", "title": "Lisinopril facts",
+                                               "source_url": "https://example.org/l", "text": LISINOPRIL}, follow=True)
+        self.assertContains(response, "Review document 1 of 1")
+        form = response.context["form"]
+        self.assertEqual(form["title"].value(), "Lisinopril facts")
+        self.assertEqual(form["source_url"].value(), "https://example.org/l")
+        self.assertEqual(form["content"].value(), LISINOPRIL)
+
     def test_urls_report_each_item(self):
         self.client.force_login(self.staff)
         response = self.client.post(self.url, {"action": "urls", "urls": "http://127.0.0.1/\nftp://x.org/a"})
