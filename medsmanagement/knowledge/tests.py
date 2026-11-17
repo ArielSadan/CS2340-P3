@@ -283,6 +283,7 @@ class FileExtractionTests(SimpleTestCase):
  
  
 # ============================================================ Part 2: database
+# time check
  
 RET = "chat.services.retrieval"
  
