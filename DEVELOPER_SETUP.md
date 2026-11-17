@@ -17,18 +17,28 @@ Open http://127.0.0.1:8000/developer/knowledge/ and log in with your superuser a
 
 ## Manage documents
 
-- **Upload files:** PDF, DOCX, MD, TXT, CSV, JSON or HTML, several at once.
-- **Add web pages:** paste links; the page is fetched and its main article text is used.
-- **Paste text:** "Paste text instead" link at the top of the page.
-- **Preview / Re-ingest / Delete:** links on each row of the document table.
-  Preview shows the stored chunks; re-ingest lets you edit the saved text.
+Adding knowledge is two steps:
 
-Uploading a file with the same name, or the same URL again, replaces that document.
+1. **Choose what to add** on `/developer/knowledge/`: upload files (PDF, DOCX, MD, TXT,
+   CSV, JSON or HTML, several at once), paste links (the page is fetched and its main
+   article text is used), or paste text.
+2. **Review each item** on the document form, which opens already filled in with the
+   title, source type, link, file name and extracted text. Fix anything, use
+   *Preview cleaned text and chunks* if you like (no Gemini call), then *Add and ingest*.
+   With several items you review them one after another (*Skip this one* / *Cancel all*).
+
+Each row of the document table has *Preview* (stored chunks), *Re-ingest* (edit the
+saved text) and *Delete*.
+
+Uploading a file with the same name, or the same URL again, opens as a replacement for that document.
 Identical content is skipped. From the command line: `python manage.py ingest file.pdf https://...`
 
-How it fits together: `knowledge/ingestion/` only reads files and web pages into
-text. Cleaning, chunking, embedding and storing are done by the chat pipeline
-(`chat.services.ingestion.ingest_document`), and every document is a `chat.models.Document`.
+`manage.py ingest` skips the review step and adds the items straight away.
+
+How it fits together: `knowledge/ingestion/sources.py` reads files, web pages and
+pasted text into drafts. `chat/developer_views.py` (`document_review`) shows each
+draft on the document form. Cleaning, chunking, embedding and storing are done by
+`chat.services.ingestion.ingest_document`, and every document is a `chat.models.Document`.
 Keep API keys out of Git. Each environment needs its own ingested documents.
 
 ## Tests
