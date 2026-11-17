@@ -19,6 +19,7 @@
     <header class="dev__header">
       <h1>Knowledge base</h1>
       <p>Add files and web pages for the chatbot to answer from.
+        <a href="{% url 'chat:document_add' %}">Paste text instead</a> ·
         <a href="{% url 'chat:page' %}">Open the chat</a></p>
     </header>
 
@@ -77,17 +78,22 @@
       <h2 id="docs-title">In the knowledge base ({{ document_count }} document{{ document_count|pluralize }})</h2>
       <div class="dev__table-wrap">
         <table class="dev__table">
-          <thead><tr><th scope="col">Title</th><th scope="col">Source</th><th scope="col">Chunks</th><th scope="col" class="dev__hide-sm">Updated</th></tr></thead>
+          <thead><tr><th scope="col">Title</th><th scope="col">Source</th><th scope="col">Chunks</th><th scope="col" class="dev__hide-sm">Updated</th><th scope="col">Actions</th></tr></thead>
           <tbody>
           {% for d in documents %}
             <tr>
               <td>{% if d.source_url %}<a href="{{ d.source_url }}" target="_blank" rel="noopener">{{ d.title }}</a>{% else %}{{ d.title }}{% endif %}</td>
-              <td>{{ d.get_source_type_display }}</td>
+              <td>{{ d.get_source_type_display }}{% if d.file_name %}<br><small>{{ d.file_name }}</small>{% endif %}</td>
               <td>{{ d.chunk_total }}</td>
-              <td class="dev__hide-sm">{{ d.updated_at|date:"M j, Y g:i A" }}</td>
+              <td class="dev__hide-sm">{{ d.ingested_at|date:"M j, Y g:i A" }}</td>
+              <td>
+                <a href="{% url 'chat:document_preview' d.pk %}" aria-label="Preview {{ d.title }}">Preview</a> ·
+                <a href="{% url 'chat:document_reingest' d.pk %}" aria-label="Re-ingest {{ d.title }}">Re-ingest</a> ·
+                <a href="{% url 'chat:document_delete' d.pk %}" aria-label="Delete {{ d.title }}">Delete</a>
+              </td>
             </tr>
           {% empty %}
-            <tr><td colspan="4" class="dev__empty">Nothing added yet.</td></tr>
+            <tr><td colspan="5" class="dev__empty">Nothing added yet.</td></tr>
           {% endfor %}
           </tbody>
         </table>

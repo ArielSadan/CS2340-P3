@@ -146,7 +146,7 @@ class PreprocessingPageTests(TestCase):
         data = dict(form.data.items())
         data["action"] = "ingest"
         response = self.client.post(reverse("chat:document_add"), data)
-        self.assertRedirects(response, reverse("chat:documents"))
+        self.assertRedirects(response, reverse("knowledge:developer"))
         document = Document.objects.get()
         self.assertEqual(document.file_name, "source.html")
         self.assertEqual(document.cleaned_content, SOURCE_TEXT)

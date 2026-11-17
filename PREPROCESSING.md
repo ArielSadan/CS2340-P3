@@ -21,4 +21,6 @@ Each chunk keeps its source, title, position, and ingestion date.
 
 Use Preview before saving or from the document table after ingestion.
 Previewing makes no Gemini calls. Check that important source text is retained.
-Importers can use `chat.services.ingestion.ingest_document(document)` for the full pipeline.
+Every ingestion path uses this pipeline: the Developer page uploads and URLs
+(`knowledge.ingestion.sources`), the paste-text form, and `manage.py ingest`.
+Importers can call `chat.services.ingestion.ingest_document(document)` directly.

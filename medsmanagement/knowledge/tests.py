@@ -9,16 +9,14 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
  
-from chat.models import DocumentChunk
+from chat.models import Document, DocumentChunk
 from chat.services import retrieval
-from knowledge.chunking import chunk_section, chunk_sections, split_sentences
 from knowledge.ingestion import extract, fetch
 from knowledge.ingestion.errors import (
     BlockedByHost, FetchFailed, InvalidURL, NoReadableText, PrivatePage, UnsafeURL, UnsupportedFile,
 )
 from knowledge.ingestion.fetch import FetchedPage
 from knowledge.ingestion.sources import ingest_uploaded_file, ingest_url
-from knowledge.models import Document
  
  
 # ============================================================ fakes for Gemini
@@ -49,33 +47,6 @@ class FakeRateLimit(Exception):
 ARTICLE = "<p>" + " ".join(
     f"Sentence {i} explains how older adults manage medicines safely." for i in range(40)
 ) + "</p>"
- 
- 
-# ------------------------------------------------------------ chunking
- 
-class ChunkingTests(SimpleTestCase):
-    def test_splits_sentences(self):
-        self.assertEqual(split_sentences("One. Two!  Three?"), ["One.", "Two!", "Three?"])
- 
-    def test_chunks_respect_size_and_overlap(self):
-        text = " ".join(f"Sentence number {i} has six words." for i in range(100))
-        chunks = chunk_section(text, "Body", max_words=60, overlap_words=12)
-        self.assertGreater(len(chunks), 5)
-        for c in chunks:
-            self.assertLessEqual(len(c.text.split()), 60)
-            self.assertEqual(c.section, "Body")
-        # overlap: the last sentence of one chunk is repeated at the start of the next
-        last_sentence = split_sentences(chunks[0].text)[-1]
-        self.assertIn(last_sentence, chunks[1].text[:80])
- 
-    def test_very_long_sentence_is_hard_split(self):
-        chunks = chunk_section("word " * 700, max_words=300, overlap_words=0)
-        self.assertEqual([len(c.text.split()) for c in chunks], [300, 300, 100])
- 
-    def test_sections_keep_headings(self):
-        chunks = chunk_sections([("Uses", "Lowers sugar."), ("Side effects", "Upset stomach.")])
-        self.assertEqual([c.section for c in chunks], ["Uses", "Side effects"])
-        self.assertEqual(chunks[1].text_for_embedding("Metformin"), "Metformin — Side effects: Upset stomach.")
  
  
 # ------------------------------------------------------------ URLs
@@ -349,11 +320,21 @@ class FileIngestionTests(KnowledgeTestCase):
         result = ingest_uploaded_file(upload("metformin_guide.txt", METFORMIN))
         self.assertEqual(result.status, "added", result.message)
         doc = Document.objects.get()
-        self.assertEqual(doc.source_key, "file:metformin_guide.txt")
+        self.assertEqual(doc.file_name, "metformin_guide.txt")
+        self.assertEqual(doc.content, METFORMIN)  # kept for preview and re-ingest
         chunk = DocumentChunk.objects.get()
         self.assertEqual(chunk.document, doc)
         self.assertEqual(chunk.source, "metformin guide")  # readable title, not a file path
-        self.assertTrue(chunk.text.startswith("metformin guide: "))
+        self.assertEqual(chunk.text, METFORMIN)  # chat pipeline: cleaned text, no title prefix
+
+    def test_html_upload_is_cleaned(self):
+        html = f"<html><head><title>Metformin</title></head><body><nav>Home</nav><main><p>{METFORMIN}</p></main></body></html>"
+        result = ingest_uploaded_file(upload("metformin.html", html))
+        self.assertEqual(result.status, "added", result.message)
+        text = DocumentChunk.objects.get().text
+        self.assertNotIn("<p>", text)
+        self.assertNotIn("Home", text)
+        self.assertEqual(Document.objects.get().title, "Metformin")
  
     def test_chat_retrieval_finds_ingested_text(self):
         ingest_uploaded_file(upload("metformin.txt", METFORMIN))
@@ -425,8 +406,8 @@ class UrlIngestionTests(KnowledgeTestCase):
             result = ingest_url(self.URL + "/?utm_source=newsletter#top")
         self.assertEqual(result.status, "added", result.message)
         doc = Document.objects.get()
-        self.assertEqual(doc.source_key, self.URL)  # normalized
-        self.assertEqual(doc.source_url, self.URL)
+        self.assertEqual(doc.source_url, self.URL)  # normalized
+        self.assertEqual(doc.source_type, "article")
         self.assertEqual(DocumentChunk.objects.get().source, "Lisinopril")
  
     def test_same_url_twice_is_skipped(self):

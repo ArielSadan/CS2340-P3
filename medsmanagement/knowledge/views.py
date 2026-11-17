@@ -1,18 +1,19 @@
-from django.shortcuts import render
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count
+from django.shortcuts import render
+
+from chat.models import Document
+
 from .conf import get_setting
 from .ingestion.extract import ALLOWED_EXTENSIONS
-from .ingestion.pipeline import ERROR, IngestResult
-from .ingestion.sources import ingest_uploaded_file, ingest_url
-from .models import Document
- 
- 
+from .ingestion.sources import ERROR, IngestResult, ingest_uploaded_file, ingest_url
+
+
 @staff_member_required
 def developer_knowledge(request):
     results = []
     max_items = get_setting("KNOWLEDGE_MAX_ITEMS_PER_SUBMIT")
- 
+
     if request.method == "POST":
         action = request.POST.get("action")
         if action == "upload":
@@ -35,11 +36,9 @@ def developer_knowledge(request):
                 results.append(ingest_url(line))
             for line in lines[max_items:]:
                 results.append(IngestResult(line, ERROR, f"Skipped: at most {max_items} URLs at a time."))
- 
-    # Documents whose chunks were cleared are hidden; re-ingesting them works.
-    documents = (
-        Document.objects.annotate(chunk_total=Count("chunks")).filter(chunk_total__gt=0)
-    )
+
+    # Documents whose chunks were cleared (#11) stay listed so they can be re-ingested.
+    documents = Document.objects.annotate(chunk_total=Count("chunks")).order_by("-ingested_at")
     context = {
         "results": results,
         "documents": documents[:100],

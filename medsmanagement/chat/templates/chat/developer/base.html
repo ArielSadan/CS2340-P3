@@ -16,7 +16,7 @@
       </div>
       <nav aria-label="Developer navigation">
         <a href="{% url 'chat:page' %}">Chat</a>
-        <a href="{% url 'chat:documents' %}">Knowledge base</a>
+        <a href="{% url 'knowledge:developer' %}">Knowledge base</a>
         <form method="post" action="{% url 'admin:logout' %}">
           {% csrf_token %}
           <button class="button--small" type="submit">Log out</button>
