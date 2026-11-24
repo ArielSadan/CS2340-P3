@@ -1,0 +1,13 @@
+{% extends "home/base.html" %}
+{% block title %}Create an account{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
+{% block content %}
+<h1>Create an account</h1>
+<form method="post" class="card form">
+  {% csrf_token %}
+  {% include "home/_form_errors.html" %}
+  {% for field in form %}{% include "home/_field.html" %}{% endfor %}
+  <button type="submit">Create my account</button>
+</form>
+<p class="muted">Already have an account? <a href="{% url 'home:login' %}">Log in</a>.</p>
+{% endblock %}

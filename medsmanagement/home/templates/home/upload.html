@@ -1,0 +1,17 @@
+{% extends "home/base.html" %}
+{% block title %}Upload my instructions{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
+{% block content %}
+<h1>Upload my instructions</h1>
+<p class="lead">Take a photo of a pharmacy label, prescription printout or doctor's instructions.
+  We'll suggest the simplest schedule, and you check it before anything is saved.</p>
+<form method="post" enctype="multipart/form-data" class="card form" data-busy-text="Reading your instructions… this can take a little while">
+  {% csrf_token %}
+  {% include "home/_form_errors.html" %}
+  {% include "home/_field.html" with field=form.file %}
+  {% include "home/_field.html" with field=form.text %}
+  <button type="submit">Make my schedule</button>
+</form>
+<p class="muted">Photos and files are only read to make the draft. They aren't saved.
+  Please use sample or practice labels, not real prescriptions, while this is a class project.</p>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "home/base.html" %}
+{% block title %}Welcome{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
+{% block content %}
+<section class="welcome">
+  {% include "home/_pet.html" with mood="happy" pet_name="Pip" %}
+  <h1>Meet your medicine buddy</h1>
+  <p class="lead">Tell your buddy when you take your medicines. It cheers you on, keeps a simple log,
+    and can share that log with someone who helps care for you.</p>
+  <div class="button-row">
+    <a class="button" href="{% url 'home:signup' %}">Create an account</a>
+    <a class="button button--secondary" href="{% url 'home:login' %}">Log in</a>
+  </div>
+  <p class="muted">Just have a question about a medicine? <a href="{% url 'chat:page' %}">Ask without an account</a>.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "home/base.html" %}
+{% block title %}{{ profile.pet_name }} is fed!{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
+{% block content %}
+<section class="card fed">
+  {% include "home/_pet.html" with mood=mood pet_name=profile.pet_name celebrate=True %}
+  <h1>{{ profile.pet_name }} is fed!</h1>
+  <p>You took {{ result.names|join:", " }} at {{ result.time }}.</p>
+  <p class="stats"><strong>{% if result.gain %}Health +{{ result.gain }}{% else %}Health is full{% endif %}</strong> · Streak {{ streak }} day{{ streak|pluralize }}</p>
+</section>
+<p class="notice">
+  {% if caregiver_link %}Your log was saved and shared with your caregiver.
+  {% else %}Your log was saved. <a href="{% url 'home:share' %}">Share it with a caregiver</a>.{% endif %}
+</p>
+<a class="button button--big" href="{% url 'home:hub' %}">Back to {{ profile.pet_name }}</a>
+{% endblock %}

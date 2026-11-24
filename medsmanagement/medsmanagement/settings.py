@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'home',
     'chat',
     'knowledge',
     'evaluation' ,
@@ -146,3 +147,7 @@ RAG_MIN_CHUNK_CHARS = 80
 
 BOT_TOPIC_DESCRIPTION = "managing your medications"
 BOT_EXAMPLE_QUESTION = "What should I do if I miss a dose of my medicine?"
+
+LOGIN_URL = "home:login"
+LOGIN_REDIRECT_URL = "home:hub"
+LOGOUT_REDIRECT_URL = "home:hub"

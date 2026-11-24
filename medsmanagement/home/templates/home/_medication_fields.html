@@ -1,0 +1,24 @@
+{% include "home/_form_errors.html" %}
+<div class="field-row">
+  {% include "home/_field.html" with field=form.name %}
+  {% include "home/_field.html" with field=form.strength %}
+</div>
+{% include "home/_field.html" with field=form.how_to_take %}
+<label class="check"><span>{{ form.as_needed }}</span> <span>{{ form.as_needed.label }}</span></label>
+<fieldset class="times" data-times>
+  <legend>Times of day</legend>
+  <div class="times__grid">
+    {% for field in form.time_fields %}
+      <div class="time-input{% if forloop.counter > 2 and not field.value %} is-hidden{% endif %}" data-time>
+        <label for="{{ field.id_for_label }}" class="visually-hidden">{{ field.label }}</label>
+        {{ field }}
+        {% for error in field.errors %}<p class="field__error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+  <button type="button" class="button--secondary button--small" data-add-time>Add another time</button>
+</fieldset>
+<fieldset class="days">
+  <legend>Days</legend>
+  <div class="days__grid">{% for box in form.weekdays %}<label class="day">{{ box.tag }} {{ box.choice_label }}</label>{% endfor %}</div>
+</fieldset>

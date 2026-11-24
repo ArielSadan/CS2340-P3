@@ -1,0 +1,39 @@
+{% extends "home/base.html" %}
+{% block title %}My medicines{% endblock %}
+{% block content %}
+<h1>My medicines</h1>
+<div class="button-row">
+  <a class="button" href="{% url 'home:upload' %}">Upload my instructions</a>
+  <a class="button button--secondary" href="{% url 'home:medication_add' %}">Add by hand</a>
+</div>
+
+{% if rows %}
+  <ul class="med-list">
+    {% for row in rows %}
+      <li class="card med">
+        <div class="med__info">
+          <h2>{{ row.med.label }}</h2>
+          {% if row.med.how_to_take %}<p>{{ row.med.how_to_take }}</p>{% endif %}
+          <p class="med__times">
+            {% if row.med.as_needed %}Only when needed{% else %}{{ row.times }} · {{ row.days }}{% endif %}
+          </p>
+        </div>
+        <div class="med__actions">
+          <a class="button button--secondary button--small" href="{% url 'home:medication_edit' row.med.pk %}">Change</a>
+          <form method="post" action="{% url 'home:medication_stop' row.med.pk %}"
+                data-confirm="Stop {{ row.med.label }}? Its past doses stay in your log.">
+            {% csrf_token %}
+            <button class="button--secondary button--small" type="submit">Stop taking</button>
+          </form>
+        </div>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <div class="card">
+    <p>No medicines yet. The easiest way is to take a photo of your pharmacy label or doctor's instructions
+      and upload it. {{ profile.pet_name }} will suggest a simple schedule for you to check.</p>
+  </div>
+{% endif %}
+<p class="muted">Times use your time zone: {{ profile.timezone }}. <a href="{% url 'home:settings' %}">Change it</a>.</p>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Buddy Hub{% endblock %} · MediGuide</title>
+  {% block head %}{% endblock %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'chat/chat.css' %}">
+  <link rel="stylesheet" href="{% static 'home/home.css' %}">
+</head>
+<body>
+  {% block nav %}
+  <header class="site-nav">
+    <a class="site-nav__brand" href="{% url 'home:hub' %}">MediGuide</a>
+    <nav aria-label="Main">
+      {% if user.is_authenticated %}
+        <a href="{% url 'home:hub' %}">Home</a>
+        <a href="{% url 'home:medications' %}">My medicines</a>
+        <a href="{% url 'chat:page' %}">Ask a question</a>
+        <a href="{% url 'home:share' %}">Caregiver</a>
+        <a href="{% url 'home:settings' %}">Settings</a>
+        <form method="post" action="{% url 'home:logout' %}">
+          {% csrf_token %}
+          <button class="link-button" type="submit">Log out</button>
+        </form>
+      {% else %}
+        <a href="{% url 'chat:page' %}">Ask a question</a>
+        <a href="{% url 'home:login' %}">Log in</a>
+      {% endif %}
+    </nav>
+  </header>
+  {% endblock %}
+
+  <main class="page {% block page_class %}{% endblock %}">
+    {% if messages %}
+      <div class="notices" aria-live="polite">
+        {% for message in messages %}<p class="notice notice--{{ message.tags|default:'info' }}">{{ message }}</p>{% endfor %}
+      </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <script src="{% static 'home/home.js' %}"></script>
+</body>
+</html>

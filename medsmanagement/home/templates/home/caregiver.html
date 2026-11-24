@@ -1,0 +1,41 @@
+{% extends "home/base.html" %}
+{% block title %}{{ profile.display_name }}'s medication log{% endblock %}
+{% block head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block nav %}
+<header class="site-nav"><span class="site-nav__brand">MediGuide · Caregiver view</span></header>
+{% endblock %}
+{% block content %}
+<h1>{{ profile.display_name }}'s medication log</h1>
+<section class="card summary">
+  {% if week.total %}
+    <p class="summary__big">{{ week.taken }} of {{ week.total }} doses taken this week</p>
+    <div class="meter" role="img" aria-label="{{ week.percent }} percent taken">
+      <div class="meter__fill" style="width: {{ week.percent }}%"></div>
+    </div>
+  {% else %}
+    <p>No scheduled doses in the last 7 days yet.</p>
+  {% endif %}
+</section>
+
+<section class="card" aria-labelledby="log-title">
+  <h2 id="log-title">Last 14 days</h2>
+  {% if entries %}
+    <table class="log-table">
+      <thead><tr><th scope="col">When</th><th scope="col">Medicine</th><th scope="col">Status</th></tr></thead>
+      <tbody>
+        {% for e in entries %}
+          <tr class="log--{{ e.status }}">
+            <td>{{ e.when }}</td>
+            <td>{{ e.name }}{% if e.status == "taken_late" %} <span class="muted">(due {{ e.scheduled }})</span>{% endif %}</td>
+            <td><span class="badge badge--{{ e.status }}">{{ e.status_label }}</span></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Nothing logged yet.</p>
+  {% endif %}
+</section>
+<p class="muted">Times are in {{ profile.display_name }}'s time zone ({{ tz_name }}). A dose counts as missed when it
+  isn't logged within 2 hours of its time. This page is read-only.</p>
+{% endblock %}
