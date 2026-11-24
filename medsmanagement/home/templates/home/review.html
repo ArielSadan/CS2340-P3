@@ -1,0 +1,37 @@
+{% extends "home/base.html" %}
+{% block title %}Check your schedule{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
+{% block content %}
+<h1>Check your schedule</h1>
+<p class="lead">This is a suggestion made from your instructions. Please compare it with the label and fix anything
+  that's wrong. Nothing is saved until you press <strong>Confirm</strong>.</p>
+
+<form method="post" class="form">
+  {% csrf_token %}
+  {{ formset.management_form }}
+  {% for row in rows %}
+    {% with form=row.form draft=row.draft %}
+    <section class="card review{% if draft.needs_check %} review--check{% endif %}">
+      {% if draft.needs_check %}
+        <p class="review__flag" role="note"><strong>Please check:</strong> {{ draft.check_note|default:"Something here may be unclear." }}</p>
+      {% endif %}
+      {% if row.existing %}<p class="muted">You already have {{ row.existing.label }}. Confirming will update it.</p>{% endif %}
+      <label class="check check--strong"><span>{{ form.include }}</span> <span>{{ form.include.label }}</span></label>
+      {% include "home/_medication_fields.html" %}
+      {% if draft.source_text %}
+        <details class="review__source"><summary>What the instructions say</summary><blockquote>{{ draft.source_text }}</blockquote></details>
+      {% endif %}
+    </section>
+    {% endwith %}
+  {% endfor %}
+  <div class="button-row">
+    <button type="submit">Confirm</button>
+  </div>
+</form>
+<form method="post" action="{% url 'home:discard_draft' %}">
+  {% csrf_token %}
+  <button class="link-button" type="submit">Throw away this draft</button>
+</form>
+<p class="muted">This schedule only organizes the instructions you gave. It is not medical advice.
+  Ask your pharmacist or doctor if anything is unclear.</p>
+{% endblock %}

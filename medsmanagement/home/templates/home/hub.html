@@ -1,0 +1,61 @@
+{% extends "home/base.html" %}
+{% block title %}{{ profile.pet_name }}{% endblock %}
+{% block content %}
+<section class="pet-card card" aria-labelledby="pet-title">
+  {% include "home/_pet.html" with mood=mood pet_name=profile.pet_name %}
+  <div class="pet-card__status">
+    <h1 id="pet-title">{{ profile.pet_name }}</h1>
+    <p class="pet-card__mood">
+      {% if mood == "happy" %}{{ profile.pet_name }} is happy and healthy.
+      {% elif mood == "content" %}{{ profile.pet_name }} is doing okay.
+      {% else %}{{ profile.pet_name }} is feeling sleepy. Logging a medicine will cheer them up.{% endif %}
+    </p>
+    <div class="meter" role="img" aria-label="Health {{ profile.health }} percent">
+      <div class="meter__fill meter__fill--{{ mood }}" style="width: {{ profile.health }}%"></div>
+    </div>
+    <p class="stats"><strong>Health {{ profile.health }}%</strong> · Streak {{ streak }} day{{ streak|pluralize }}</p>
+  </div>
+</section>
+
+{% if has_meds %}
+  <a class="button button--big" href="{% url 'home:feed' %}">
+    Feed {{ profile.pet_name }} (log my medicines){% if due_count %} · {{ due_count }} due now{% endif %}
+  </a>
+{% endif %}
+
+<section class="card" aria-labelledby="today-title">
+  <h2 id="today-title">Today's medicines</h2>
+  {% if slots %}
+    <ul class="dose-list">
+      {% for slot in slots %}
+        <li class="dose dose--{{ slot.status }}">
+          <span class="dose__time">{{ slot.time_label }}</span>
+          <span class="dose__name">{{ slot.medication_name }}</span>
+          <span class="dose__status">
+            {% if slot.status == "taken" %}✓ Taken {{ slot.taken_label }}
+            {% elif slot.status == "taken_late" %}✓ Taken late {{ slot.taken_label }}
+            {% elif slot.status == "due" %}Due now
+            {% elif slot.status == "missed" %}Not logged
+            {% else %}Later{% endif %}
+          </span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% elif has_meds %}
+    <p>Nothing scheduled for today.</p>
+  {% else %}
+    <p>You haven't added any medicines yet.</p>
+    <div class="button-row">
+      <a class="button" href="{% url 'home:upload' %}">Upload my instructions</a>
+      <a class="button button--secondary" href="{% url 'home:medication_add' %}">Add a medicine by hand</a>
+    </div>
+  {% endif %}
+  {% if as_needed_meds %}
+    <p class="muted">Only when needed: {% for med in as_needed_meds %}{{ med.label }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+  {% endif %}
+</section>
+
+{% if has_meds and not caregiver_link %}
+  <p class="muted">Want someone who helps care for you to see your log? <a href="{% url 'home:share' %}">Share it with a caregiver</a>.</p>
+{% endif %}
+{% endblock %}

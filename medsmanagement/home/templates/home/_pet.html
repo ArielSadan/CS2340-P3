@@ -1,0 +1,63 @@
+<figure class="pet pet--{{ mood }}{% if celebrate %} pet--celebrate{% endif %}">
+  <svg viewBox="0 0 260 190" role="img" aria-labelledby="pet-desc">
+    <title id="pet-desc">{{ pet_name }} the turtle looks {% if mood == "happy" %}happy{% elif mood == "content" %}calm{% else %}sleepy{% endif %}</title>
+
+    <ellipse class="pet__shadow" cx="128" cy="170" rx="96" ry="10"/>
+
+    <g class="pet__body">
+      <path class="pet__skin" d="M40 138 L18 146 L40 150 Z"/>
+      <rect class="pet__skin" x="56" y="132" width="30" height="34" rx="14"/>
+      <rect class="pet__skin" x="150" y="132" width="30" height="34" rx="14"/>
+      <rect class="pet__skin-dark" x="62" y="152" width="22" height="14" rx="7"/>
+      <rect class="pet__skin-dark" x="156" y="152" width="22" height="14" rx="7"/>
+
+      <path class="pet__skin" d="M178 118 Q196 96 204 84 L222 98 Q206 124 188 138 Z"/>
+
+      <g class="pet__shell">
+        <path class="pet__shell-base" d="M34 132 Q34 46 120 42 Q190 40 196 132 Z"/>
+        <path class="pet__plate" d="M96 70 L120 58 L144 70 L144 96 L120 108 L96 96 Z"/>
+        <path class="pet__plate" d="M58 104 Q60 84 78 72 L92 82 L92 106 L74 118 L56 118 Z"/>
+        <path class="pet__plate" d="M182 118 L166 118 L148 106 L148 82 L162 74 Q180 88 182 118 Z"/>
+        <path class="pet__plate" d="M98 104 L120 114 L142 104 L148 118 L120 124 L92 118 Z"/>
+        <rect class="pet__rim" x="28" y="122" width="174" height="16" rx="8"/>
+      </g>
+
+      <g class="pet__head">
+        <circle class="pet__skin" cx="214" cy="80" r="32"/>
+        <ellipse class="pet__cheek" cx="200" cy="92" rx="7" ry="4.5"/>
+        <ellipse class="pet__cheek" cx="234" cy="90" rx="6" ry="4"/>
+
+        {% if mood == "sleepy" %}
+          <path class="pet__line" d="M199 76 Q205 81 211 76"/>
+          <path class="pet__line" d="M222 75 Q228 80 234 75"/>
+          <path class="pet__line" d="M210 94 Q216 96 222 94"/>
+        {% elif mood == "happy" %}
+          <path class="pet__line" d="M199 78 Q205 70 211 78"/>
+          <path class="pet__line" d="M222 77 Q228 69 234 77"/>
+          <path class="pet__mouth" d="M205 92 Q216 104 227 92 Z"/>
+        {% else %}
+          <circle class="pet__eye" cx="205" cy="76" r="4.5"/>
+          <circle class="pet__eye" cx="228" cy="75" r="4.5"/>
+          <circle class="pet__glint" cx="206.5" cy="74.5" r="1.4"/>
+          <circle class="pet__glint" cx="229.5" cy="73.5" r="1.4"/>
+          <path class="pet__line" d="M208 93 Q216 99 224 93"/>
+        {% endif %}
+      </g>
+
+    </g>
+
+    {% if mood == "sleepy" %}
+      <g class="pet__zzz">
+        <text x="236" y="40">z</text>
+        <text x="248" y="24" class="pet__zzz-small">z</text>
+      </g>
+    {% endif %}
+    {% if celebrate %}
+      <g class="pet__hearts">
+        <path d="M30 40 c0-7 10-9 12-2 c2-7 12-5 12 2 c0 8-12 14-12 14 s-12-6-12-14z"/>
+        <path d="M232 22 c0-5 7-6 8-1 c1-5 8-4 8 1 c0 6-8 10-8 10 s-8-4-8-10z"/>
+        <path d="M70 18 c0-4 6-5 7-1 c1-4 7-3 7 1 c0 5-7 8-7 8 s-7-3-7-8z"/>
+      </g>
+    {% endif %}
+  </svg>
+</figure>

@@ -1,0 +1,15 @@
+{% extends "home/base.html" %}
+{% block title %}{% if med %}Change {{ med.label }}{% else %}Add a medicine{% endif %}{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
+{% block content %}
+<h1>{% if med %}Change {{ med.label }}{% else %}Add a medicine{% endif %}</h1>
+<form method="post" class="card form">
+  {% csrf_token %}
+  {% include "home/_medication_fields.html" %}
+  <div class="button-row">
+    <button type="submit">Save</button>
+    <a class="button button--secondary" href="{% url 'home:medications' %}">Cancel</a>
+  </div>
+</form>
+<p class="muted">Copy the times from your instructions. Ask your pharmacist if you're not sure when to take a medicine.</p>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "home/base.html" %}
+{% block title %}Share with a caregiver{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
+{% block content %}
+<h1>Share with a caregiver</h1>
+<p class="lead">Give someone who helps care for you a private link. They can see which medicines you logged and
+  when, but they can't change anything.</p>
+
+<section class="card">
+  {% if link %}
+    <label for="share-url" class="field__label">Your caregiver link</label>
+    <div class="copy-row">
+      <input id="share-url" type="text" value="{{ url }}" readonly>
+      <button type="button" class="button--small" data-copy="#share-url">Copy</button>
+    </div>
+    <p class="muted">Send it by text or email. Anyone with this link can see your log.</p>
+    <div class="button-row">
+      <form method="post">{% csrf_token %}<input type="hidden" name="action" value="replace">
+        <button class="button--secondary button--small" type="submit">Make a new link</button></form>
+      <form method="post" data-confirm="Stop sharing? The link will stop working.">{% csrf_token %}<input type="hidden" name="action" value="revoke">
+        <button class="button--secondary button--small" type="submit">Stop sharing</button></form>
+    </div>
+  {% else %}
+    <p>You're not sharing your log with anyone.</p>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="create">
+      <button type="submit">Make a caregiver link</button></form>
+  {% endif %}
+</section>
+{% endblock %}

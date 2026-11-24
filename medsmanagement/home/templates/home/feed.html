@@ -1,0 +1,62 @@
+{% extends "home/base.html" %}
+{% block title %}Feed {{ profile.pet_name }}{% endblock %}
+{% block page_class %}page--narrow{% endblock %}
+{% block content %}
+<h1>Which medicines did you take?</h1>
+
+{% if nothing_to_log %}
+  <div class="card">
+    <p>Everything for today is already logged. {{ profile.pet_name }} is well fed!</p>
+    <a class="button" href="{% url 'home:hub' %}">Back to {{ profile.pet_name }}</a>
+  </div>
+{% else %}
+<form method="post" class="card form" novalidate>
+  {% csrf_token %}
+  {% include "home/_form_errors.html" %}
+
+  {% if groups.due %}
+    <fieldset class="checklist">
+      <legend>Due now</legend>
+      {% for slot in groups.due %}
+        <label class="check"><input type="checkbox" name="doses" value="{{ slot.form_value }}"{% if slot.form_value in selected %} checked{% endif %}>
+          <span>{{ slot.medication_name }} <span class="muted">({{ slot.time_label }})</span></span></label>
+      {% endfor %}
+    </fieldset>
+  {% endif %}
+
+  {% if groups.missed %}
+    <fieldset class="checklist">
+      <legend>Earlier today, not logged yet</legend>
+      {% for slot in groups.missed %}
+        <label class="check"><input type="checkbox" name="doses" value="{{ slot.form_value }}"{% if slot.form_value in selected %} checked{% endif %}>
+          <span>{{ slot.medication_name }} <span class="muted">({{ slot.time_label }})</span></span></label>
+      {% endfor %}
+    </fieldset>
+  {% endif %}
+
+  {% if groups.later %}
+    <details class="checklist"{% if not groups.due and not groups.missed %} open{% endif %}>
+      <summary>Later today</summary>
+      {% for slot in groups.later %}
+        <label class="check"><input type="checkbox" name="doses" value="{{ slot.form_value }}"{% if slot.form_value in selected %} checked{% endif %}>
+          <span>{{ slot.medication_name }} <span class="muted">({{ slot.time_label }})</span></span></label>
+      {% endfor %}
+    </details>
+  {% endif %}
+
+  {% if as_needed %}
+    <fieldset class="checklist">
+      <legend>Only when needed</legend>
+      {% for med in as_needed %}
+        <label class="check"><input type="checkbox" name="as_needed" value="{{ med.pk }}"{% if med.pk|stringformat:"s" in selected_as_needed %} checked{% endif %}>
+          <span>{{ med.label }}</span></label>
+      {% endfor %}
+    </fieldset>
+  {% endif %}
+
+  {% include "home/_field.html" with field=form.taken_time %}
+  <button type="submit">Give to {{ profile.pet_name }}</button>
+</form>
+{% endif %}
+<p><a href="{% url 'home:hub' %}">Back</a></p>
+{% endblock %}
