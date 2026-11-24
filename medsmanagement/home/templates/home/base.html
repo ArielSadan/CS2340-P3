@@ -21,7 +21,14 @@
         <a href="{% url 'home:medications' %}">My medicines</a>
         <a href="{% url 'chat:page' %}">Ask a question</a>
         <a href="{% url 'home:share' %}">Caregiver</a>
-        <a href="{% url 'home:settings' %}">Settings</a>
+         <a href="{% url 'home:settings' %}">Settings</a>
+
+        {% if user.is_staff and perms.chat.view_querylog %}
+          <a href="{% url 'admin:chat_querylog_changelist' %}">
+            Performance
+          </a>
+        {% endif %}
+
         <form method="post" action="{% url 'home:logout' %}">
           {% csrf_token %}
           <button class="link-button" type="submit">Log out</button>

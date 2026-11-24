@@ -42,3 +42,21 @@ class DocumentChunk(models.Model):
 
     def __str__(self):
         return f"{self.source} #{self.pk}"
+
+class QueryLog(models.Model):
+    "Object to log queries to the RAG chatbot and their performance."
+
+    STATUS_CHOICES = [
+        ("ok", "answered"),
+        ("off_topic", "off-topic"),
+        ("error", "failed")
+    ]
+
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES)
+    latency_ms = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Chatbot Performance"
+        verbose_name_plural = "Chatbot Performance"
+        ordering = ["-created_at", "-id"]

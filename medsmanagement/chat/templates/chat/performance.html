@@ -1,0 +1,125 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a>
+  &rsaquo; Chatbot performance
+</div>
+{% endblock %}
+
+{% block content %}
+
+<p>
+  Updated {{ updated_at|date:"Y-m-d H:i:s T" }}.
+  <a href="">Refresh metrics</a>
+</p>
+
+<form method="get">
+  <label for="hours">Reporting window</label>
+
+  <select id="hours" name="hours">
+    <option value="24" {% if hours == 24 %}selected{% endif %}>
+      Last 24 hours
+    </option>
+    <option value="168" {% if hours == 168 %}selected{% endif %}>
+      Last 7 days
+    </option>
+    <option value="720" {% if hours == 720 %}selected{% endif %}>
+      Last 30 days
+    </option>
+  </select>
+
+  <button type="submit">Apply</button>
+</form>
+
+<section class="card" aria-label="Performance summary">
+  <dl>
+    <dt>Total requests</dt>
+    <dd>{{ metrics.total }}</dd>
+
+    <dt>Answered</dt>
+    <dd>{{ metrics.answered }}</dd>
+
+    <dt>Off topic (not failures)</dt>
+    <dd>{{ metrics.off_topic }}</dd>
+
+    <dt>Failures</dt>
+    <dd>{{ metrics.failures }}</dd>
+
+    <dt>Failure rate</dt>
+    <dd>{{ metrics.failure_rate|floatformat:1 }}%</dd>
+
+    <dt>Average response time</dt>
+    <dd>
+      {% if metrics.total %}
+        {{ metrics.average_ms|floatformat:0 }} ms
+      {% else %}
+        No data
+      {% endif %}
+    </dd>
+
+    <dt>Maximum response time</dt>
+    <dd>
+      {% if metrics.total %}
+        {{ metrics.maximum_ms }} ms
+      {% else %}
+        No data
+      {% endif %}
+    </dd>
+
+    <dt>Slow requests (over {{ threshold_ms }} ms)</dt>
+    <dd>{{ metrics.slow }}</dd>
+  </dl>
+</section>
+
+<p>
+  Timing covers the chatbot processing call, including retrieval and
+  generation when used. It excludes browser/network delay and the
+  monitoring database write. Invalid input is excluded.
+  Slow requests use a configurable monitoring target, not a guaranteed
+  service level.
+</p>
+
+<h2>Latest 50 requests in this window</h2>
+
+<div style="overflow-x:auto">
+  <table>
+    <caption>
+      Operational metadata; questions and answers are not recorded.
+    </caption>
+
+    <thead>
+      <tr>
+        <th scope="col">Timestamp</th>
+        <th scope="col">Outcome</th>
+        <th scope="col">Response time</th>
+        <th scope="col">Speed</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for entry in recent %}
+        <tr>
+          <td>{{ entry.created_at|date:"Y-m-d H:i:s T" }}</td>
+          <td>{{ entry.get_status_display }}</td>
+          <td>{{ entry.latency_ms }} ms</td>
+          <td>
+            {% if entry.latency_ms > threshold_ms %}
+              Slow
+            {% else %}
+              Within target
+            {% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="4">
+            No requests recorded in this window.
+            Send a chatbot question to start collecting metrics.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
