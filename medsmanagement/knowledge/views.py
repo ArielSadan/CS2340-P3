@@ -1,12 +1,16 @@
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.db.models import Count
-from django.shortcuts import render
+from django.http import HttpResponseBadRequest
+from django.shortcuts import redirect, render
+from django.urls import reverse
 
 from chat.developer_views import start_review
-from chat.models import Document
+from chat.models import Document, PromptStyle
+from chat.services.rag import STYLE_LABELS, get_prompt_styles
 
 from .conf import get_setting
+from .forms import PromptStyleForm
 from .ingestion.extract import ALLOWED_EXTENSIONS
 from .ingestion.sources import ERROR, IngestResult, prepare_text, prepare_uploaded_file, prepare_url
 
@@ -43,8 +47,27 @@ def developer_knowledge(request):
     then opens on the document form (step 2) to be checked before it's ingested."""
     results = []
     max_items = get_setting("KNOWLEDGE_MAX_ITEMS_PER_SUBMIT")
+    styles = get_prompt_styles()
+    saved_styles = {style.code: style for style in PromptStyle.objects.all()}
+    prompt_cards = []
+    editing_prompts = request.method == "POST" and request.POST.get("action") == "save_prompt"
+    selected = request.POST.get("style")
+    if editing_prompts and selected not in STYLE_LABELS:
+        return HttpResponseBadRequest("Unknown response style.")
+    for code, title in STYLE_LABELS.items():
+        instance = saved_styles.get(code) or PromptStyle(
+            code=code, phrases="\n".join(styles[code]["phrases"]),
+            instructions=styles[code]["instructions"],
+        )
+        data = request.POST if editing_prompts and selected == code else None
+        form = PromptStyleForm(data, instance=instance, prefix=code)
+        prompt_cards.append({"code": code, "title": title, "form": form})
+        if data is not None and form.is_valid():
+            form.save()
+            messages.success(request, f"{title} updated. Changes apply to the next question.")
+            return redirect(reverse("knowledge:developer") + "#prompt-settings")
 
-    if request.method == "POST":
+    if request.method == "POST" and not editing_prompts:
         drafts, results = _read_submission(request, max_items)
         if drafts:
             # Problems with the other items are shown at the top of the review form.
@@ -57,6 +80,7 @@ def developer_knowledge(request):
     documents = Document.objects.annotate(chunk_total=Count("chunks")).order_by("-ingested_at")
     context = {
         "results": results,
+        "prompt_cards": prompt_cards,
         "documents": documents[:100],
         "document_count": documents.count(),
         "allowed_extensions": ", ".join(sorted(ALLOWED_EXTENSIONS)),

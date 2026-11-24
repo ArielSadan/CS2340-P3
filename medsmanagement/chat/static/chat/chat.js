@@ -40,6 +40,13 @@
       wrap.classList.add("msg--" + opts.status);
     }
 
+    if (role === "bot" && opts.status === "ok" && opts.style) {
+      const label = document.createElement("p");
+      label.className = "msg__style";
+      label.textContent = opts.style;
+      wrap.appendChild(label);
+    }
+
     const p = document.createElement("p");
     p.className = "msg__text";
     p.textContent = text;
@@ -158,7 +165,7 @@
 
       loading.remove();
       if (data && data.answer) {
-        addMessage("bot", data.answer, { status: data.status, sources: data.sources });
+        addMessage("bot", data.answer, { status: data.status, sources: data.sources, style: data.response_style });
         failed = data.status === "error";
       } else {
         addMessage("bot", MSG_GENERIC, { status: "error" });

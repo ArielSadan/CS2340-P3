@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'chat/chat.css' %}">
-  <link rel="stylesheet" href="{% static 'knowledge/developer.css' %}">
+  <link rel="stylesheet" href="{% static 'knowledge/developer.css' %}?v=3">
 </head>
 <body>
   <main class="dev">
@@ -91,6 +91,29 @@
           <textarea id="text-body" class="dev__urls" name="text" rows="5" required></textarea>
           <button type="submit">Review text</button>
         </form>
+      </div>
+    </section>
+
+    <section id="prompt-settings" aria-labelledby="prompts-title">
+      <h2 id="prompts-title">Chatbot response styles</h2>
+      <p class="dev__hint">Edit a style and save. Changes apply to the next question.</p>
+      <div class="dev__grid dev__prompt-grid">
+        {% for card in prompt_cards %}
+        <form class="dev__card dev__prompt-card" method="post" action="#prompt-settings">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="save_prompt">
+          <input type="hidden" name="style" value="{{ card.code }}">
+          <h3>{{ card.title }}</h3>
+          {{ card.form.non_field_errors }}
+          {% for field in card.form %}
+            <label class="dev__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field.errors }}
+            {{ field }}
+            {% if field.help_text %}<p class="dev__hint">{{ field.help_text }}</p>{% endif %}
+          {% endfor %}
+          <button type="submit">Save</button>
+        </form>
+        {% endfor %}
       </div>
     </section>
 

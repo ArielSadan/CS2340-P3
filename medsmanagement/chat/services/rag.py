@@ -3,11 +3,14 @@
 #can always hand the user a friendly message.
 
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 
 from django.conf import settings
 from google.genai import types
+
+from chat.models import PromptStyle
 
 from . import grounding
 from .gemini import get_client
@@ -37,6 +40,7 @@ class ChatResult:
     sources: list = field(default_factory=list)
     latency_ms: int = 0
     reason: str = ""
+    response_style: str = ""
 
 
 def off_topic_message() -> str:
@@ -45,10 +49,95 @@ def off_topic_message() -> str:
     )
 
 
-def build_prompt(question: str, chunks: list[Chunk]) -> str:
-    #J: Story #8 (dynamic prompts) plugs in here: pick a template by question intent.
+# Check detailed requests first, then explicit short answers, then explanations.
+INTENT_PHRASES = {
+    "details": (
+        "in detail", "in details", "more detail", "more details", "tell me more",
+        "break it down", "break down", "go into detail", "go into details",
+        "going into details", "detailed explanation", "detailed answer", "step by step",
+        "in depth", "full explanation", "full details", "all the details",
+        "more information", "more info", "walk me through", "explain further",
+        "elaborate", "expand on", "give me examples", "with examples",
+        "be specific", "thorough explanation",
+    ),
+    "quick": (
+        "quick answer", "briefly", "keep it short", "short answer",
+        "in a few words", "in one sentence", "short version", "brief answer",
+        "brief summary", "quick summary", "summarize", "sum it up",
+        "to the point", "just the basics", "main point", "key points",
+        "short and simple", "a few sentences", "tldr", "tl dr",
+    ),
+    "explain": (
+        "explain", "explanation", "why", "how does", "how do",
+        "help me understand", "with sources", "clarify", "how can", "how should",
+        "how would", "how is", "how are", "what does this mean",
+        "what does that mean", "in simple terms", "in plain english",
+        "help me make sense", "which source", "where does it say",
+        "according to the article", "according to the document",
+    ),
+}
+
+STYLE_LABELS = {
+    "quick": "Quick Answer",
+    "explain": "Explain with Sources",
+    "details": "Going Into Details",
+}
+
+PROMPT_TEMPLATES = {
+    "quick": (
+        "Answer the question directly in 1 to 3 short sentences. "
+        "Focus on the main point and leave out extra background."
+    ),
+    "explain": (
+        "Give a short explanation in plain language. Explain the reason or connection "
+        "the user is asking about. Mention the supporting source titles when helpful."
+    ),
+    "details": (
+        "Give a fuller explanation in short, readable paragraphs. Include relevant "
+        "details and use numbered steps or examples only when the context supports them. "
+        "Keep the answer short if the context contains little information; do not pad it."
+    ),
+}
+
+
+def get_prompt_styles():
+    styles = {
+        code: {"phrases": list(INTENT_PHRASES[code]), "instructions": PROMPT_TEMPLATES[code]}
+        for code in STYLE_LABELS
+    }
+    for saved in PromptStyle.objects.filter(code__in=STYLE_LABELS):
+        styles[saved.code] = {
+            "phrases": saved.phrases.splitlines(),
+            "instructions": saved.instructions,
+        }
+    return styles
+
+
+def detect_intent(question: str, styles=None) -> str:
+    styles = get_prompt_styles() if styles is None else styles
+    words = " " + " ".join(re.findall(r"\w+", question.lower())) + " "
+    for intent in INTENT_PHRASES:
+        for phrase in styles[intent]["phrases"]:
+            phrase = " ".join(re.findall(r"\w+", phrase.lower()))
+            if phrase and " " + phrase + " " in words:
+                return intent
+    return "quick"
+
+
+def build_prompt(question: str, chunks: list[Chunk], styles=None) -> str:
+    styles = get_prompt_styles() if styles is None else styles
+    intent = detect_intent(question, styles)
     context = grounding.format_context(chunks)
-    return f"Context:\n{context}\n\nQuestion: {question}"
+    rules = (
+        "Use ONLY the provided context for every response style. "
+        "Cite each factual sentence with its numbered excerpt, such as [1]. "
+        f"If the context does not contain the answer, reply with exactly {NO_ANSWER_TOKEN} "
+        "and nothing else."
+    )
+    return (
+        f"Response style: {STYLE_LABELS[intent]}.\n{styles[intent]['instructions']}\n\n"
+        f"{rules}\n\nContext:\n{context}\n\nQuestion: {question}"
+    )
 
 
 def _unique_sources(chunks: list[Chunk]) -> list[str]:
@@ -72,9 +161,14 @@ def _unique_sources(chunks: list[Chunk]) -> list[str]:
 
 def answer_question(question: str) -> ChatResult:
     start = time.monotonic()
+    intent = "quick"
 
     def finish(answer, status, sources=None, reason=""):
-        return ChatResult(answer, status, sources or [], int((time.monotonic() - start) * 1000), reason)
+        return ChatResult(
+            answer=answer, status=status, sources=sources or [],
+            latency_ms=int((time.monotonic() - start) * 1000), reason=reason,
+            response_style=STYLE_LABELS[intent] if status == "ok" else "",
+        )
 
     # 1. Retrieve
     try:
@@ -91,9 +185,11 @@ def answer_question(question: str) -> ChatResult:
 
     # 3. Generate
     try:
+        styles = get_prompt_styles()
+        intent = detect_intent(question, styles)
         response = get_client().models.generate_content(
             model=settings.GEMINI_CHAT_MODEL,
-            contents=build_prompt(question, relevant),
+            contents=build_prompt(question, relevant, styles),
             config=types.GenerateContentConfig(
                 system_instruction=grounding.with_grounding_rules(SYSTEM_INSTRUCTION),
                 temperature=0.2,

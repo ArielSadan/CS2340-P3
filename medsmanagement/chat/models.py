@@ -60,3 +60,15 @@ class QueryLog(models.Model):
         verbose_name = "Chatbot Performance"
         verbose_name_plural = "Chatbot Performance"
         ordering = ["-created_at", "-id"]
+
+class PromptStyle(models.Model):
+    code = models.CharField(max_length=20, unique=True, choices=[
+        ("quick", "Quick Answer"),
+        ("explain", "Explain with Sources"),
+        ("details", "Going Into Details"),
+    ])
+    phrases = models.TextField(blank=True, max_length=2000)
+    instructions = models.TextField(max_length=2000)
+
+    def __str__(self):
+        return self.get_code_display()

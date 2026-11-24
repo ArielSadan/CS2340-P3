@@ -81,6 +81,7 @@ body {
   color: var(--warn-ink);
   border-color: var(--warn-line);
 }
+.msg__style { margin: 0 0 .35rem; color: var(--primary); font-weight: 700; }
 .msg__text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg__sources { margin: .6rem 0 0; font-size: .85rem; color: var(--muted); }
 

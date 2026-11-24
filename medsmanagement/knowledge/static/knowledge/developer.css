@@ -117,3 +117,13 @@ a:focus-visible { outline: 4px solid var(--focus); outline-offset: 2px; }
 
 /* Messages from the review form (added, skipped, problems with other items) */
 .dev__message { display: block; border-radius: .5rem; padding: .6rem 1rem; margin: 0 0 .5rem; }
+
+.dev__prompt-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .65rem; align-items: start; }
+.dev__prompt-card { min-width: 0; padding: .65rem; border-radius: .65rem; }
+.dev__prompt-card h3 { font-size: 1rem; margin-bottom: .4rem; }
+.dev__prompt-card .dev__label { font-size: .85rem; margin-bottom: .2rem; }
+.dev__prompt-field { min-height: 3.5rem; height: 4.5rem; padding: .35rem .45rem; margin-bottom: .5rem; font-size: .85rem; line-height: 1.35; }
+.dev__prompt-card button { min-height: 2.2rem; padding: .3rem .75rem; font-size: .85rem; }
+@media (max-width: 600px) {
+  .dev__prompt-grid { grid-template-columns: 1fr; }
+}

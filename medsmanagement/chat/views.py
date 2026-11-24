@@ -69,6 +69,7 @@ def chat_api(request):
     return JsonResponse({
         "session_id": str(body.get("session_id", "")),
         "answer": result.answer,
+        "response_style": result.response_style,
         "status": result.status,
         "sources": result.sources,
         "latency_ms": result.latency_ms,
