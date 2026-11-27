@@ -52,7 +52,7 @@
     <dt>Average response time</dt>
     <dd>
       {% if metrics.total %}
-        {{ metrics.average_ms|floatformat:0 }} ms
+        {{ metrics.avg_ms|floatformat:0 }} ms
       {% else %}
         No data
       {% endif %}
@@ -61,7 +61,7 @@
     <dt>Maximum response time</dt>
     <dd>
       {% if metrics.total %}
-        {{ metrics.maximum_ms }} ms
+        {{ metrics.max_ms }} ms
       {% else %}
         No data
       {% endif %}
@@ -85,7 +85,7 @@
 <div style="overflow-x:auto">
   <table>
     <caption>
-      Operational metadata; questions and answers are not recorded.
+      Operational metadata. Answers are not recorded; question text is visible on the <a href="{% url 'chat:usage' %}">Usage logs</a> page.
     </caption>
 
     <thead>

@@ -1,0 +1,62 @@
+/* Usage logs page (#12). Uses the colour variables from chat.css / home.css. */
+.page.page--wide { max-width: 78rem; }
+.usage__header { margin-bottom: 1rem; }
+.usage__header .muted { margin: 0; }
+
+.usage-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .75rem; list-style: none; padding: 0; margin: 0 0 1rem; }
+.usage-tiles .card { margin: 0; padding: .9rem 1rem; }
+.usage-tiles__label { display: block; color: var(--muted); font-size: .85rem; line-height: 1.3; }
+.usage-tiles__value { display: block; font-size: 1.9rem; font-weight: 700; line-height: 1.2; margin-top: .25rem; }
+
+.usage-chart .muted { margin: -.5rem 0 .75rem; }
+.usage-bars { display: flex; align-items: flex-end; gap: 2px; height: 10rem; border-bottom: 1px solid var(--line); }
+.usage-bar { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.usage-bar__fill { display: block; width: 100%; background: var(--primary); border-radius: 4px 4px 0 0; }
+.usage-bar:hover .usage-bar__fill, .usage-bar:focus .usage-bar__fill { opacity: .7; }
+.usage-bar:focus-visible { outline: 4px solid var(--focus); outline-offset: 2px; }
+.usage-bar__tip {
+  display: none; position: absolute; bottom: calc(100% + .4rem); left: 50%; transform: translateX(-50%);
+  white-space: nowrap; background: var(--ink); color: var(--surface); font-size: .8rem;
+  padding: .2rem .5rem; border-radius: .35rem; z-index: 2; pointer-events: none;
+}
+.usage-bar:first-child .usage-bar__tip { left: 0; transform: none; }
+.usage-bar:last-child .usage-bar__tip { left: auto; right: 0; transform: none; }
+.usage-bar:hover .usage-bar__tip, .usage-bar:focus .usage-bar__tip { display: block; }
+.usage-axis { display: flex; gap: 2px; margin-top: .3rem; color: var(--muted); font-size: .75rem; }
+.usage-axis span { flex: 1; text-align: center; white-space: nowrap; }
+.usage-chart__table { margin-top: .75rem; font-size: .95rem; }
+.usage-chart__table summary { cursor: pointer; font-weight: 700; }
+.usage-chart__table table { max-width: 22rem; margin-top: .5rem; }
+
+.usage-filters { margin-top: .5rem; }
+.usage-filters__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .75rem 1rem; align-items: end; }
+.usage-filters .field input, .usage-filters .field select { width: 100%; min-width: 0; box-sizing: border-box; }
+.usage-filters .field { margin: 0; }
+.usage-filters .button-row { margin: 1rem 0 0; }
+
+.usage-table-wrap { overflow-x: auto; border: 2px solid var(--line); border-radius: 1rem; background: var(--surface); }
+.usage-table-wrap:focus-visible { outline: 4px solid var(--focus); outline-offset: 2px; }
+.usage-table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.usage-table th, .usage-table td { text-align: left; vertical-align: top; padding: .7rem .8rem; border-bottom: 1px solid var(--line); }
+.usage-table tbody tr:last-child td { border-bottom: 0; }
+.usage-table th { font-size: .85rem; white-space: nowrap; }
+.usage-table th a { color: var(--ink); text-decoration: none; }
+.usage-table th a:hover, .usage-table th a:focus-visible { text-decoration: underline; }
+.usage-table th[aria-sort] a { color: var(--primary); }
+.usage-table__time { white-space: nowrap; }
+.usage-table__question { min-width: 16rem; max-width: 30rem; overflow-wrap: anywhere; }
+.usage-table__sources { min-width: 10rem; max-width: 18rem; overflow-wrap: anywhere; }
+.usage-table__sources span { display: block; }
+.usage-table__num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.usage-outcome { display: inline-block; font-weight: 700; white-space: nowrap; padding: .05rem .5rem; border-radius: .4rem; border: 1px solid; }
+.usage-outcome--ok { color: var(--ok-ink); background: var(--ok-bg); border-color: var(--ok-line); }
+.usage-outcome--fail { color: var(--bad-ink); background: var(--bad-bg); border-color: var(--bad-line); }
+.usage-outcome__detail { display: block; margin-top: .15rem; }
+
+.usage-pager { display: flex; align-items: center; justify-content: center; gap: 1rem; margin: 1rem 0; }
+.usage__note { margin-top: 1.5rem; }
+
+@media (max-width: 40rem) {
+  .usage-tiles__value { font-size: 1.5rem; }
+  .usage-axis span:not(:first-child):not(:last-child) { visibility: hidden; }
+}

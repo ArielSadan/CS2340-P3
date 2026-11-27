@@ -57,13 +57,18 @@ def chat_api(request):
 
     latency_ms = max(0, round((time.monotonic() - started) * 1000))
 
+    # One row per question, shared by Performance (#10) and Usage logs (#12).
+    # Deliberately no user, session_id or IP: the question text is the only user content kept.
     try:
         QueryLog.objects.create(
             status=result.status,
             latency_ms=latency_ms,
+            question=message,
+            intent=result.intent,
+            sources=result.sources,
         )
     except Exception:
-        logger.exception("Failed to record chatbot performance")
+        logger.exception("Failed to record chatbot usage log")
 
     # J: session_id and latency_ms are here for the usage-logs story (#12).
     return JsonResponse({

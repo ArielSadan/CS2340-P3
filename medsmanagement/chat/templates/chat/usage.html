@@ -1,0 +1,149 @@
+{% extends "home/base.html" %}
+{% load static %}
+{% block title %}Usage logs{% endblock %}
+{% block head %}<link rel="stylesheet" href="{% static 'chat/usage.css' %}?v=4">{% endblock %}
+{% block page_class %}page--wide usage{% endblock %}
+
+{% block content %}
+<header class="usage__header">
+  <h1>Chatbot usage logs</h1>
+  <p class="muted">How people are using the “Ask a question” chatbot. Dates and times are in {% now "e" %}.</p>
+</header>
+
+<section aria-labelledby="summary-title">
+  <h2 id="summary-title" class="visually-hidden">Summary</h2>
+  <ul class="usage-tiles">
+    <li class="card"><span class="usage-tiles__label">Queries today</span><span class="usage-tiles__value">{{ usage.totals.today }}</span></li>
+    <li class="card"><span class="usage-tiles__label">Queries, last 7 days</span><span class="usage-tiles__value">{{ usage.totals.week }}</span></li>
+    <li class="card"><span class="usage-tiles__label">Success rate, last 7 days</span><span class="usage-tiles__value">{% if usage.totals.week_success_rate is not None %}{{ usage.totals.week_success_rate|floatformat:1 }}%{% else %}–{% endif %}</span></li>
+    <li class="card"><span class="usage-tiles__label">Average response, last 7 days</span><span class="usage-tiles__value">{% if usage.totals.week_avg_ms is not None %}{{ usage.totals.week_avg_ms|floatformat:0 }} ms{% else %}–{% endif %}</span></li>
+    <li class="card"><span class="usage-tiles__label">Queries, all time</span><span class="usage-tiles__value">{{ usage.totals.all_time }}</span></li>
+  </ul>
+</section>
+
+<section class="card usage-chart" aria-labelledby="chart-title">
+  <h2 id="chart-title">Queries per day</h2>
+  <p class="muted">Last {{ usage.chart_days }} days{% if usage.chart_peak %} · busiest day: {{ usage.chart_peak }}{% endif %}</p>
+  <div class="usage-bars" role="img" aria-label="Bar chart of queries per day for the last {{ usage.chart_days }} days. The same numbers are in the table below the chart.">
+    {% for d in usage.chart %}
+      <div class="usage-bar" tabindex="0" aria-label="{{ d.day|date:'D M j' }}: {{ d.count }}">
+        <span class="usage-bar__fill" style="height: {{ d.pct }}%"></span>
+        <span class="usage-bar__tip" aria-hidden="true">{{ d.day|date:"D M j" }}: {{ d.count }} quer{{ d.count|pluralize:"y,ies" }}</span>
+      </div>
+    {% endfor %}
+  </div>
+  <div class="usage-axis" aria-hidden="true">
+    {% for d in usage.chart %}<span>{% if forloop.first or forloop.last or forloop.counter0|divisibleby:3 %}{{ d.day|date:"M j" }}{% endif %}</span>{% endfor %}
+  </div>
+  <details class="usage-chart__table">
+    <summary>Show as table</summary>
+    <table class="log-table">
+      <thead><tr><th scope="col">Day</th><th scope="col">Queries</th></tr></thead>
+      <tbody>{% for d in usage.chart %}<tr><td>{{ d.day|date:"D Y-m-d" }}</td><td>{{ d.count }}</td></tr>{% endfor %}</tbody>
+    </table>
+  </details>
+</section>
+
+<section aria-labelledby="log-title">
+  <h2 id="log-title">Query log</h2>
+
+  <form method="get" class="card usage-filters" role="search" aria-label="Filter the query log">
+    <div class="usage-filters__grid">
+      <div class="field usage-filters__search">
+        <label for="f-q">Search questions</label>
+        <input id="f-q" type="search" name="q" value="{{ filters.q }}" placeholder="e.g. metformin">
+      </div>
+      <div class="field">
+        <label for="f-from">From</label>
+        <input id="f-from" type="date" name="from" value="{{ filters.date_from|date:'Y-m-d' }}">
+      </div>
+      <div class="field">
+        <label for="f-to">To</label>
+        <input id="f-to" type="date" name="to" value="{{ filters.date_to|date:'Y-m-d' }}">
+      </div>
+      <div class="field">
+        <label for="f-outcome">Outcome</label>
+        <select id="f-outcome" name="outcome">
+          <option value="">All outcomes</option>
+          {% for value, label in outcomes.items %}<option value="{{ value }}"{% if filters.outcome == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-intent">Intent</label>
+        <select id="f-intent" name="intent">
+          <option value="">All intents</option>
+          {% for value, label in intents.items %}<option value="{{ value }}"{% if filters.intent == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+          <option value="none"{% if filters.intent == "none" %} selected{% endif %}>Not recorded</option>
+        </select>
+      </div>
+    </div>
+    {% if sort != "-time" %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+    <div class="button-row">
+      <button type="submit" class="button button--small">Apply filters</button>
+      {% if filters.active %}<a class="button button--secondary button--small" href="{{ clear_url }}">Clear filters</a>{% endif %}
+    </div>
+  </form>
+
+  <p class="muted" aria-live="polite">
+    {% if page.paginator.count %}
+      Showing {{ page.start_index }}–{{ page.end_index }} of {{ page.paginator.count }} quer{{ page.paginator.count|pluralize:"y,ies" }}{% if filters.active %} matching your filters{% endif %}.
+    {% else %}
+      {% if filters.active %}No queries match these filters.{% else %}No queries have been logged yet. They appear here as soon as someone uses the chatbot.{% endif %}
+    {% endif %}
+  </p>
+
+  {% if rows %}
+  <div class="usage-table-wrap" tabindex="0" role="region" aria-label="Query log table">
+    <table class="usage-table">
+      <thead>
+        <tr>
+          {% for col in columns %}
+            {% if forloop.counter == 4 %}<th scope="col">Sources</th>{% endif %}
+            <th scope="col"{% if col.active %} aria-sort="{% if col.descending %}descending{% else %}ascending{% endif %}"{% endif %}>
+              <a href="{{ col.url }}">{{ col.label }}<span class="usage-sort" aria-hidden="true">{% if col.active %}{% if col.descending %} ▼{% else %} ▲{% endif %}{% endif %}</span></a>
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="usage-table__time">{{ row.log.created_at|date:"M j, Y" }}<br><span class="muted">{{ row.log.created_at|date:"g:i:s A" }}</span></td>
+          <td class="usage-table__question">{{ row.log.question|default:"(not recorded)" }}</td>
+          <td>{{ row.intent|default:"–" }}</td>
+          <td class="usage-table__sources">
+            {% for s in row.sources %}
+              <span>{% if s.url %}<a href="{{ s.url }}" target="_blank" rel="noopener noreferrer">{{ s.title }}</a>{% else %}{{ s.title }}{% endif %}</span>
+            {% empty %}<span class="muted">None</span>{% endfor %}
+          </td>
+          <td class="usage-table__num">{{ row.log.latency_ms }} ms</td>
+          <td>
+            {% if row.log.succeeded %}
+              <span class="usage-outcome usage-outcome--ok"><span aria-hidden="true">✓</span> Success</span>
+            {% else %}
+              <span class="usage-outcome usage-outcome--fail"><span aria-hidden="true">✕</span> Failure</span>
+            {% endif %}
+            <span class="muted usage-outcome__detail">{{ row.log.get_status_display }}</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page.has_other_pages %}
+  <nav class="usage-pager" aria-label="Pages">
+    {% if page.has_previous %}<a class="button button--secondary button--small" href="{{ page_url }}&amp;page={{ page.previous_page_number }}">‹ Previous</a>{% endif %}
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="button button--secondary button--small" href="{{ page_url }}&amp;page={{ page.next_page_number }}">Next ›</a>{% endif %}
+  </nav>
+  {% endif %}
+  {% endif %}
+</section>
+
+<p class="muted usage__note">
+  Success means the chatbot answered, or correctly said the question was outside its topic. Failure means
+  something went wrong. Only the question text is stored: no names, accounts, session IDs or IP addresses.
+  The summary and chart cover all queries; the filters apply to the log table.
+</p>
+{% endblock %}

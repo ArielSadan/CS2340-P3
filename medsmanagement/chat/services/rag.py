@@ -41,6 +41,7 @@ class ChatResult:
     latency_ms: int = 0
     reason: str = ""
     response_style: str = ""
+    intent: str = ""  # detected intent code ("quick" | "explain" | "details"), for usage logs
 
 
 def off_topic_message() -> str:
@@ -161,13 +162,21 @@ def _unique_sources(chunks: list[Chunk]) -> list[str]:
 
 def answer_question(question: str) -> ChatResult:
     start = time.monotonic()
-    intent = "quick"
+
+    # Detect intent up front so every outcome (even off-topic and errors) can be logged with it.
+    try:
+        styles = get_prompt_styles()
+        intent = detect_intent(question, styles)
+    except Exception:
+        logger.exception("Intent detection failed")
+        styles, intent = None, "quick"
 
     def finish(answer, status, sources=None, reason=""):
         return ChatResult(
             answer=answer, status=status, sources=sources or [],
             latency_ms=int((time.monotonic() - start) * 1000), reason=reason,
             response_style=STYLE_LABELS[intent] if status == "ok" else "",
+            intent=intent,
         )
 
     # 1. Retrieve
@@ -185,8 +194,8 @@ def answer_question(question: str) -> ChatResult:
 
     # 3. Generate
     try:
-        styles = get_prompt_styles()
-        intent = detect_intent(question, styles)
+        if styles is None:
+            styles = get_prompt_styles()
         response = get_client().models.generate_content(
             model=settings.GEMINI_CHAT_MODEL,
             contents=build_prompt(question, relevant, styles),

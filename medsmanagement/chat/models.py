@@ -44,7 +44,11 @@ class DocumentChunk(models.Model):
         return f"{self.source} #{self.pk}"
 
 class QueryLog(models.Model):
-    "Object to log queries to the RAG chatbot and their performance."
+    """One row per chatbot question. Shared by Performance (#10) and Usage logs (#12).
+
+    Privacy: only the question text is stored. No user, session id, IP address
+    or answer text is kept, so a row can't be traced back to a person.
+    """
 
     STATUS_CHOICES = [
         ("ok", "answered"),
@@ -55,10 +59,29 @@ class QueryLog(models.Model):
     status = models.CharField(max_length=16, choices=STATUS_CHOICES)
     latency_ms = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    # Usage-log fields (#12). Blank for rows recorded before they existed.
+    question = models.TextField(blank=True, default="")
+    intent = models.CharField(max_length=20, blank=True, default="")
+    sources = models.JSONField(blank=True, default=list)  # [{"title": ..., "url": ...}]
 
     class Meta:
         verbose_name = "Chatbot Performance"
         verbose_name_plural = "Chatbot Performance"
+        ordering = ["-created_at", "-id"]
+
+    @property
+    def succeeded(self):
+        """Off-topic replies are a correct outcome; only errors count as failures."""
+        return self.status != "error"
+
+
+class UsageLog(QueryLog):
+    """Same rows as QueryLog, shown on its own admin page (Usage logs)."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "Usage log"
+        verbose_name_plural = "Usage logs"
         ordering = ["-created_at", "-id"]
 
 class PromptStyle(models.Model):

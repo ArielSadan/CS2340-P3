@@ -1,0 +1,75 @@
+{% extends "admin/change_list.html" %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .usage-summary { margin: 0 0 1.5rem; }
+  .usage-tiles { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 1rem; padding: 0; list-style: none; }
+  .usage-tiles li { list-style: none; flex: 1 1 150px; padding: 12px 14px; border: 1px solid var(--hairline-color); border-radius: 6px; background: var(--body-bg); }
+  .usage-tiles .label { display: block; color: var(--body-quiet-color); font-size: 0.8125rem; }
+  .usage-tiles .value { display: block; font-size: 1.75rem; font-weight: 600; color: var(--body-fg); line-height: 1.2; }
+  .usage-chart { border: 1px solid var(--hairline-color); border-radius: 6px; padding: 12px 14px; background: var(--body-bg); }
+  .usage-chart h2 { margin: 0 0 2px; font-size: 0.9375rem; color: var(--body-fg); background: none; padding: 0; }
+  .usage-chart .sub { margin: 0 0 10px; color: var(--body-quiet-color); font-size: 0.8125rem; }
+  .usage-bars { display: flex; align-items: flex-end; gap: 2px; height: 140px; border-bottom: 1px solid var(--hairline-color); }
+  .usage-bar { flex: 1; height: 100%; display: flex; align-items: flex-end; position: relative; }
+  .usage-bar span.fill { display: block; width: 100%; background: var(--link-fg); border-radius: 4px 4px 0 0; min-height: 0; }
+  .usage-bar:hover span.fill, .usage-bar:focus span.fill { background: var(--link-hover-color); }
+  .usage-bar:focus { outline: 2px solid var(--link-fg); outline-offset: 2px; }
+  .usage-bar .tip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    white-space: nowrap; background: var(--body-fg); color: var(--body-bg); font-size: 0.75rem; padding: 3px 7px; border-radius: 4px; z-index: 2; }
+  .usage-bar:hover .tip, .usage-bar:focus .tip { display: block; }
+  .usage-axis { display: flex; gap: 2px; margin-top: 4px; color: var(--body-quiet-color); font-size: 0.6875rem; }
+  .usage-axis span { flex: 1; text-align: center; }
+  .usage-chart details { margin-top: 10px; font-size: 0.8125rem; }
+  .usage-chart table { margin-top: 6px; }
+  .usage-note { color: var(--body-quiet-color); font-size: 0.8125rem; margin: 8px 0 0; }
+  .usage-range { padding: 0 15px 10px; }
+  .usage-range label { display: block; margin: 6px 0 2px; font-size: 0.8125rem; }
+  .usage-range input[type=date] { width: 100%; box-sizing: border-box; }
+  .usage-range__actions { margin-top: 8px; display: flex; gap: 10px; align-items: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="usage-summary" aria-label="Usage summary">
+  <ul class="usage-tiles">
+    <li><span class="label">Queries today</span><span class="value">{{ usage.totals.today }}</span></li>
+    <li><span class="label">Queries, last 7 days</span><span class="value">{{ usage.totals.week }}</span></li>
+    <li><span class="label">Success rate, last 7 days</span><span class="value">{% if usage.totals.week_success_rate is not None %}{{ usage.totals.week_success_rate|floatformat:1 }}%{% else %}–{% endif %}</span></li>
+    <li><span class="label">Avg response time, last 7 days</span><span class="value">{% if usage.totals.week_avg_ms is not None %}{{ usage.totals.week_avg_ms|floatformat:0 }} ms{% else %}–{% endif %}</span></li>
+    <li><span class="label">Queries, all time</span><span class="value">{{ usage.totals.all_time }}</span></li>
+  </ul>
+
+  <div class="usage-chart">
+    <h2>Queries per day</h2>
+    <p class="sub">Last {{ usage.chart_days }} days{% if usage.chart_peak %} · busiest day: {{ usage.chart_peak }}{% endif %}</p>
+    <div class="usage-bars" role="img" aria-label="Bar chart of queries per day for the last {{ usage.chart_days }} days. Data table below.">
+      {% for d in usage.chart %}
+        <div class="usage-bar" tabindex="0">
+          <span class="fill" style="height: {{ d.pct }}%"></span>
+          <span class="tip">{{ d.day|date:"D M j" }}: {{ d.count }} quer{{ d.count|pluralize:"y,ies" }}</span>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="usage-axis" aria-hidden="true">
+      {% for d in usage.chart %}<span>{% if forloop.first or forloop.last or forloop.counter0|divisibleby:3 %}{{ d.day|date:"M j" }}{% endif %}</span>{% endfor %}
+    </div>
+    <details>
+      <summary>Show as table</summary>
+      <table>
+        <thead><tr><th scope="col">Day</th><th scope="col">Queries</th></tr></thead>
+        <tbody>
+          {% for d in usage.chart %}<tr><td>{{ d.day|date:"D Y-m-d" }}</td><td>{{ d.count }}</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </details>
+  </div>
+  <p class="usage-note">
+    Dates and times are in {% now "e" %}. Success means the chatbot answered or correctly said
+    the question was off-topic; failure means an error. Only the question text is stored — no names,
+    accounts, session IDs or IP addresses. Summary numbers ignore the filters below.
+  </p>
+</section>
+{{ block.super }}
+{% endblock %}

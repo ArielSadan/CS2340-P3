@@ -1,0 +1,16 @@
+<details data-filter-title="{{ title }}" open>
+  <summary>By {{ title }}</summary>
+  {% for choice in choices %}
+  <form method="get" class="usage-range">
+    {% for key, value in choice.hidden %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+    <label for="usage-from">From</label>
+    <input type="date" id="usage-from" name="{{ choice.param_from }}" value="{{ choice.value_from }}">
+    <label for="usage-to">To</label>
+    <input type="date" id="usage-to" name="{{ choice.param_to }}" value="{{ choice.value_to }}">
+    <div class="usage-range__actions">
+      <input type="submit" value="Apply">
+      {% if choice.active %}<a href="{{ choice.clear_url }}">Clear dates</a>{% endif %}
+    </div>
+  </form>
+  {% endfor %}
+</details>
