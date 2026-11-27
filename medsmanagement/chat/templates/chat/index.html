@@ -14,7 +14,7 @@
     <header class="chat__header">
       <h1>Ask a question</h1>
       <p>I answer questions about {{ topic }}.</p>
-      {% if request.user.is_staff %}<p><a href="{% url 'knowledge:developer' %}">Developer tools</a></p>{% endif %}
+      {% if request.user.is_staff %}<p><a href="{% url 'knowledge:developer' %}">Developer tools</a>{% if perms.chat.view_usagelog %} · <a href="{% url 'chat:usage' %}">Usage logs</a>{% endif %}</p>{% endif %}
     </header>
 
     <section id="chat-log" class="chat__log" aria-live="polite" aria-label="Conversation">
@@ -32,6 +32,7 @@ For example: “{{ example_question }}”</p>
         <button id="send-btn" type="submit">Send</button>
       </div>
       <p class="chat__hint">Press Enter to send. Press Shift + Enter for a new line.</p>
+      <p class="chat__hint chat__privacy" id="log-notice">Your questions are saved so we can see how this service is used and improve it. We do not save your name, your account or anything else about you, so please don't type personal details.</p>
     </form>
   </main>
   <script src="{% static 'chat/chat.js' %}"></script>

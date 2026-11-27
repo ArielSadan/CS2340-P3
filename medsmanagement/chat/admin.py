@@ -4,6 +4,8 @@ from .models import Document, DocumentChunk, QueryLog
 from .performance_views import performance_dashboard
 from django.core.exceptions import PermissionDenied
 
+from . import usage_admin  # noqa: F401  registers the Usage logs page (#12)
+
 
 class ChunkInline(admin.TabularInline):
     model = DocumentChunk
