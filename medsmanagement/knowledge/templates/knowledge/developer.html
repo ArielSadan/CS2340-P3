@@ -1,50 +1,182 @@
-{% load static %}{% comment %}
+
+{% load static %}
+{% comment %}
   Story #6: Developer page for knowledge ingestion.
-  Reuses chat/chat.css (colors, font, buttons, dark mode) so it matches the chat
-  page. When the team adds a shared base template, switch to {% extends %}.
-{% endcomment %}<!DOCTYPE html>
+  Story #11: Administrator controls to clear and reload knowledge.
+  Reuses chat/chat.css to match the chat page.
+{% endcomment %}
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Developer · Knowledge base</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="{% static 'chat/chat.css' %}">
-  <link rel="stylesheet" href="{% static 'knowledge/developer.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'knowledge/developer.css' %}?v=4">
+
+  <style>
+    /* P3-11: Knowledge base maintenance controls */
+
+    .kb-maintenance {
+      background: #1c252e;
+      color: #f3f6fa;
+      border: 1px solid #465665;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+
+    .kb-maintenance h3 {
+      margin-top: 0;
+    }
+
+    .kb-maintenance__stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin: 20px 0;
+    }
+
+    .kb-maintenance__stat {
+      background: #283643;
+      border: 1px solid #465665;
+      border-radius: 8px;
+      padding: 14px 20px;
+      min-width: 150px;
+    }
+
+    .kb-maintenance__stat strong {
+      display: block;
+      font-size: 26px;
+      margin-top: 5px;
+    }
+
+    .kb-maintenance__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .kb-maintenance__actions form {
+      margin: 0;
+    }
+
+    .kb-maintenance__actions button {
+      border: none;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .kb-clear {
+      background: #b83a3a;
+      color: white;
+    }
+
+    .kb-reload {
+      background: #69a8ea;
+      color: #102334;
+    }
+
+    .kb-maintenance__actions button:hover {
+      filter: brightness(1.08);
+    }
+
+    .kb-maintenance__actions button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .kb-maintenance__warning {
+      color: #ffcb8a;
+      margin-top: 18px;
+      font-size: 14px;
+    }
+  </style>
 </head>
+
 <body>
   <main class="dev">
+
+    <!-- PAGE HEADER -->
+
     <header class="dev__header">
       <h1>Knowledge base</h1>
-      <p>Add files, web pages or text for the chatbot to answer from. Each item opens on a
-        review form so you can check it before it's added.
-        <a href="{% url 'chat:page' %}">Open the chat</a></p>
+
+      <p>
+        Add files, web pages or text for the chatbot to answer from.
+        Each item opens on a review form so you can check it
+        before it's added.
+
+        <a href="{% url 'chat:page' %}">Open the chat</a>
+      </p>
     </header>
+
+
+    <!-- SUCCESS AND ERROR MESSAGES -->
 
     {% if messages %}
     <section aria-live="polite">
-      {% for message in messages %}<p class="badge dev__message badge--{% if message.level_tag == 'success' %}added{% elif message.level_tag == 'warning' or message.level_tag == 'error' %}error{% else %}skipped{% endif %}">{{ message }}</p>{% endfor %}
+      {% for message in messages %}
+        <p class="badge dev__message badge--{% if message.level_tag == 'success' %}added{% elif message.level_tag == 'warning' or message.level_tag == 'error' %}error{% else %}skipped{% endif %}">
+          {{ message }}
+        </p>
+      {% endfor %}
     </section>
     {% endif %}
+
+
+    <!-- INGESTION RESULTS -->
 
     {% if results %}
     <section aria-labelledby="results-title">
       <h2 id="results-title">Results</h2>
+
       <div class="dev__table-wrap">
         <table class="dev__table">
-          <thead><tr><th scope="col">Item</th><th scope="col">Status</th><th scope="col">Details</th></tr></thead>
+          <thead>
+            <tr>
+              <th scope="col">Item</th>
+              <th scope="col">Status</th>
+              <th scope="col">Details</th>
+            </tr>
+          </thead>
+
           <tbody>
           {% for r in results %}
             <tr>
               <td class="dev__item">{{ r.item }}</td>
+
               <td>
                 <span class="badge badge--{{ r.status }}">
-                  {% if r.status == "added" %}✓ Added{% elif r.status == "replaced" %}↻ Replaced{% elif r.status == "skipped" %}⏭ Skipped{% else %}✗ Error{% endif %}
+                  {% if r.status == "added" %}
+                    ✓ Added
+                  {% elif r.status == "replaced" %}
+                    ↻ Replaced
+                  {% elif r.status == "skipped" %}
+                    ⏭ Skipped
+                  {% else %}
+                    ✗ Error
+                  {% endif %}
                 </span>
               </td>
-              <td>{% if r.title and r.status != "error" %}<strong>{{ r.title }}</strong><br>{% endif %}{{ r.message }}</td>
+
+              <td>
+                {% if r.title and r.status != "error" %}
+                  <strong>{{ r.title }}</strong><br>
+                {% endif %}
+
+                {{ r.message }}
+              </td>
             </tr>
           {% endfor %}
           </tbody>
@@ -53,98 +185,383 @@
     </section>
     {% endif %}
 
+
+    <!-- P3-11: CLEAR AND RELOAD KNOWLEDGE BASE -->
+
+    <section id="kb-maintenance" aria-labelledby="maintenance-title">
+      <h2 id="maintenance-title">Knowledge Base Controls</h2>
+
+      <div class="kb-maintenance">
+        <h3>Manage stored knowledge</h3>
+
+        <p class="dev__hint">
+          Clear or rebuild the chatbot's searchable knowledge base.
+          Original saved documents are preserved so they can
+          be reloaded without uploading them again.
+        </p>
+
+        <div class="kb-maintenance__stats">
+
+          <div class="kb-maintenance__stat">
+            <span>Saved documents</span>
+            <strong>{{ document_count }}</strong>
+          </div>
+
+          <div class="kb-maintenance__stat">
+            <span>Indexed chunks</span>
+            <strong>{{ chunk_count }}</strong>
+          </div>
+
+        </div>
+
+
+        <div class="kb-maintenance__actions">
+
+          <!-- CLEAR KNOWLEDGE BASE -->
+
+          <form
+            method="post"
+            action="{% url 'knowledge:clear' %}"
+            onsubmit="return confirm('Are you sure you want to clear the knowledge base? All searchable chunks and embeddings will be removed. Saved documents will be preserved.');"
+          >
+            {% csrf_token %}
+
+            <button
+              type="submit"
+              class="kb-clear"
+            >
+              Clear Knowledge Base
+            </button>
+          </form>
+
+
+          <!-- RELOAD KNOWLEDGE BASE -->
+
+          <form
+            method="post"
+            action="{% url 'knowledge:reload' %}"
+            onsubmit="return confirm('Reload all saved documents and regenerate their embeddings? This will make Gemini API requests and may take some time.');"
+          >
+            {% csrf_token %}
+
+            <button
+              type="submit"
+              class="kb-reload"
+            >
+              Reload Knowledge Base
+            </button>
+          </form>
+
+        </div>
+
+        <p class="kb-maintenance__warning">
+          Note: Clearing temporarily prevents the chatbot from
+          answering questions using stored documents.
+          Reload the knowledge base to restore retrieval.
+        </p>
+
+      </div>
+    </section>
+
+
+    <!-- UPLOAD DOCUMENTS -->
+
     <section aria-labelledby="add-title">
       <h2 id="add-title">Add knowledge</h2>
+
       <div class="dev__grid">
-        <form class="dev__card ingest-form" method="post" enctype="multipart/form-data">
+
+        <!-- UPLOAD FILES -->
+
+        <form
+          class="dev__card ingest-form"
+          method="post"
+          enctype="multipart/form-data"
+        >
           {% csrf_token %}
+
           <input type="hidden" name="action" value="upload">
+
           <h3>Upload files</h3>
-          <p class="dev__hint">{{ allowed_extensions }} · up to {{ max_mb }} MB each · up to {{ max_items }} files at once</p>
+
+          <p class="dev__hint">
+            {{ allowed_extensions }} ·
+            up to {{ max_mb }} MB each ·
+            up to {{ max_items }} files at once
+          </p>
+
           <label for="files" class="dev__label">Files</label>
-          <input id="files" class="dev__file" type="file" name="files" accept="{{ accept }}" multiple required>
+
+          <input
+            id="files"
+            class="dev__file"
+            type="file"
+            name="files"
+            accept="{{ accept }}"
+            multiple
+            required
+          >
+
           <button type="submit">Upload and review</button>
         </form>
 
+
+        <!-- ADD WEB PAGES -->
+
         <form class="dev__card ingest-form" method="post">
           {% csrf_token %}
+
           <input type="hidden" name="action" value="urls">
+
           <h3>Add web pages</h3>
-          <p class="dev__hint">One link per line · up to {{ max_items }} at once. The main article text is used.
-            Pages that need a login can't be added; upload them as files instead.</p>
+
+          <p class="dev__hint">
+            One link per line · up to {{ max_items }} at once.
+            The main article text is used.
+            Pages that need a login can't be added;
+            upload them as files instead.
+          </p>
+
           <label for="urls" class="dev__label">Links</label>
-          <textarea id="urls" class="dev__urls" name="urls" rows="5" required
-                    placeholder="https://pmc.ncbi.nlm.nih.gov/articles/…&#10;https://www.nia.nih.gov/health/…"></textarea>
+
+          <textarea
+            id="urls"
+            class="dev__urls"
+            name="urls"
+            rows="5"
+            required
+            placeholder="https://pmc.ncbi.nlm.nih.gov/articles/…&#10;https://www.nia.nih.gov/health/…"
+          ></textarea>
+
           <button type="submit">Fetch and review</button>
         </form>
 
+
+        <!-- PASTE TEXT -->
+
         <form class="dev__card ingest-form" method="post">
           {% csrf_token %}
+
           <input type="hidden" name="action" value="text">
+
           <h3>Paste text</h3>
-          <p class="dev__hint">For text you can't upload as a file. The link is optional and is shown as the citation.</p>
-          <label for="text-title" class="dev__label">Title</label>
-          <input id="text-title" class="dev__file" type="text" name="title" maxlength="500" required>
-          <label for="text-url" class="dev__label">Link (optional)</label>
-          <input id="text-url" class="dev__file" type="url" name="source_url" maxlength="2000">
-          <label for="text-body" class="dev__label">Text</label>
-          <textarea id="text-body" class="dev__urls" name="text" rows="5" required></textarea>
+
+          <p class="dev__hint">
+            For text you can't upload as a file.
+            The link is optional and is shown as the citation.
+          </p>
+
+          <label for="text-title" class="dev__label">
+            Title
+          </label>
+
+          <input
+            id="text-title"
+            class="dev__file"
+            type="text"
+            name="title"
+            maxlength="500"
+            required
+          >
+
+          <label for="text-url" class="dev__label">
+            Link (optional)
+          </label>
+
+          <input
+            id="text-url"
+            class="dev__file"
+            type="url"
+            name="source_url"
+            maxlength="2000"
+          >
+
+          <label for="text-body" class="dev__label">
+            Text
+          </label>
+
+          <textarea
+            id="text-body"
+            class="dev__urls"
+            name="text"
+            rows="5"
+            required
+          ></textarea>
+
           <button type="submit">Review text</button>
         </form>
+
       </div>
     </section>
+
+
+    <!-- CHATBOT RESPONSE STYLES -->
 
     <section id="prompt-settings" aria-labelledby="prompts-title">
       <h2 id="prompts-title">Chatbot response styles</h2>
-      <p class="dev__hint">Edit a style and save. Changes apply to the next question.</p>
+
+      <p class="dev__hint">
+        Edit a style and save. Changes apply to the next question.
+      </p>
+
       <div class="dev__grid dev__prompt-grid">
+
         {% for card in prompt_cards %}
-        <form class="dev__card dev__prompt-card" method="post" action="#prompt-settings">
+
+        <form
+          class="dev__card dev__prompt-card"
+          method="post"
+          action="#prompt-settings"
+        >
           {% csrf_token %}
-          <input type="hidden" name="action" value="save_prompt">
-          <input type="hidden" name="style" value="{{ card.code }}">
+
+          <input
+            type="hidden"
+            name="action"
+            value="save_prompt"
+          >
+
+          <input
+            type="hidden"
+            name="style"
+            value="{{ card.code }}"
+          >
+
           <h3>{{ card.title }}</h3>
+
           {{ card.form.non_field_errors }}
+
           {% for field in card.form %}
-            <label class="dev__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+
+            <label
+              class="dev__label"
+              for="{{ field.id_for_label }}"
+            >
+              {{ field.label }}
+            </label>
+
             {{ field.errors }}
             {{ field }}
-            {% if field.help_text %}<p class="dev__hint">{{ field.help_text }}</p>{% endif %}
+
+            {% if field.help_text %}
+              <p class="dev__hint">
+                {{ field.help_text }}
+              </p>
+            {% endif %}
+
           {% endfor %}
+
           <button type="submit">Save</button>
         </form>
+
         {% endfor %}
+
       </div>
     </section>
 
+
+    <!-- SAVED KNOWLEDGE DOCUMENTS -->
+
     <section aria-labelledby="docs-title">
-      <h2 id="docs-title">In the knowledge base ({{ document_count }} document{{ document_count|pluralize }})</h2>
+
+      <h2 id="docs-title">
+        In the knowledge base
+        ({{ document_count }} document{{ document_count|pluralize }})
+      </h2>
+
       <div class="dev__table-wrap">
         <table class="dev__table">
-          <thead><tr><th scope="col">Title</th><th scope="col">Source</th><th scope="col">Chunks</th><th scope="col" class="dev__hide-sm">Updated</th><th scope="col">Actions</th></tr></thead>
-          <tbody>
-          {% for d in documents %}
+
+          <thead>
             <tr>
-              <td>{% if d.source_url %}<a href="{{ d.source_url }}" target="_blank" rel="noopener">{{ d.title }}</a>{% else %}{{ d.title }}{% endif %}</td>
-              <td>{{ d.get_source_type_display }}{% if d.file_name %}<br><small>{{ d.file_name }}</small>{% endif %}</td>
-              <td>{{ d.chunk_total }}</td>
-              <td class="dev__hide-sm">{{ d.ingested_at|date:"M j, Y g:i A" }}</td>
+              <th scope="col">Title</th>
+              <th scope="col">Source</th>
+              <th scope="col">Chunks</th>
+              <th scope="col" class="dev__hide-sm">Updated</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for d in documents %}
+
+            <tr>
               <td>
-                <a href="{% url 'chat:document_preview' d.pk %}" aria-label="Preview {{ d.title }}">Preview</a> ·
-                <a href="{% url 'chat:document_reingest' d.pk %}" aria-label="Re-ingest {{ d.title }}">Re-ingest</a> ·
-                <a href="{% url 'chat:document_delete' d.pk %}" aria-label="Delete {{ d.title }}">Delete</a>
+                {% if d.source_url %}
+                  <a
+                    href="{{ d.source_url }}"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    {{ d.title }}
+                  </a>
+                {% else %}
+                  {{ d.title }}
+                {% endif %}
+              </td>
+
+              <td>
+                {{ d.get_source_type_display }}
+
+                {% if d.file_name %}
+                  <br>
+                  <small>{{ d.file_name }}</small>
+                {% endif %}
+              </td>
+
+              <td>{{ d.chunk_total }}</td>
+
+              <td class="dev__hide-sm">
+                {{ d.ingested_at|date:"M j, Y g:i A" }}
+              </td>
+
+              <td>
+                <a
+                  href="{% url 'chat:document_preview' d.pk %}"
+                  aria-label="Preview {{ d.title }}"
+                >
+                  Preview
+                </a>
+                ·
+                <a
+                  href="{% url 'chat:document_reingest' d.pk %}"
+                  aria-label="Re-ingest {{ d.title }}"
+                >
+                  Re-ingest
+                </a>
+                ·
+                <a
+                  href="{% url 'chat:document_delete' d.pk %}"
+                  aria-label="Delete {{ d.title }}"
+                >
+                  Delete
+                </a>
               </td>
             </tr>
-          {% empty %}
-            <tr><td colspan="5" class="dev__empty">Nothing added yet.</td></tr>
-          {% endfor %}
+
+            {% empty %}
+
+            <tr>
+              <td colspan="5" class="dev__empty">
+                Nothing added yet.
+              </td>
+            </tr>
+
+            {% endfor %}
           </tbody>
         </table>
       </div>
     </section>
+
   </main>
+
+
+  <!-- EXISTING INGESTION LOADING BEHAVIOR -->
+
   <script>
-    // Fetching and embedding can take a while; show that the page is working.
+    // Fetching and embedding can take a while.
+    // Show a loading state for ingestion forms.
+
     document.querySelectorAll(".ingest-form").forEach(function (form) {
       form.addEventListener("submit", function () {
         var button = form.querySelector("button");
@@ -153,5 +570,6 @@
       });
     });
   </script>
+
 </body>
 </html>

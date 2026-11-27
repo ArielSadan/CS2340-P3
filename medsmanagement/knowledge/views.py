@@ -15,6 +15,10 @@ from .ingestion.extract import ALLOWED_EXTENSIONS
 from .ingestion.sources import ERROR, IngestResult, prepare_text, prepare_uploaded_file, prepare_url
 
 
+from django.views.decorators.http import require_POST
+from chat.models import DocumentChunk
+from .maintenance import clear_knowledge_base, reload_knowledge_base
+
 def _read_submission(request, max_items):
     """Read what was submitted. Returns (drafts to review, results to report)."""
     action = request.POST.get("action")
@@ -87,5 +91,57 @@ def developer_knowledge(request):
         "accept": ",".join(sorted(ALLOWED_EXTENSIONS)),
         "max_mb": get_setting("KNOWLEDGE_MAX_UPLOAD_MB"),
         "max_items": max_items,
+        "chunk_count": DocumentChunk.objects.count(),
     }
     return render(request, "knowledge/developer.html", context)
+
+@staff_member_required
+@require_POST
+def clear_knowledge(request):
+    """Administrator action to clear searchable knowledge."""
+    count = clear_knowledge_base()
+
+    messages.success(
+        request,
+        f"Knowledge base cleared successfully. "
+        f"Removed {count} chunks. Saved documents were preserved."
+    )
+
+    return redirect("knowledge:developer")
+
+
+@staff_member_required
+@require_POST
+def reload_knowledge(request):
+    """Administrator action to rebuild saved knowledge."""
+    summary = reload_knowledge_base()
+
+    if summary.failures:
+        messages.warning(
+            request,
+            f"Reload partially completed: "
+            f"{summary.processed} documents rebuilt, "
+            f"{summary.skipped} skipped, "
+            f"{len(summary.failures)} failed."
+        )
+
+        for error in summary.failures[:10]:
+            messages.error(request, error)
+
+    elif summary.processed == 0:
+        messages.warning(
+            request,
+            "No documents were rebuilt. Check that saved documents "
+            "contain text."
+        )
+
+    else:
+        messages.success(
+            request,
+            f"Knowledge base reloaded successfully. "
+            f"{summary.processed} documents processed and "
+            f"{summary.chunks_created} chunks created. "
+            f"{summary.skipped} documents skipped."
+        )
+
+    return redirect("knowledge:developer")
