@@ -1,4 +1,6 @@
-{% load static %}<!DOCTYPE html>
+
+{% load static %}
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -7,17 +9,30 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'chat/chat.css' %}">
+  <link rel="stylesheet" href="{% static 'chat/chat.css' %}?v=2">
 </head>
 <body>
   <main class="chat">
     <header class="chat__header">
       <h1>Ask a question</h1>
       <p>I answer questions about {{ topic }}.</p>
-      {% if request.user.is_staff %}<p><a href="{% url 'knowledge:developer' %}">Developer tools</a>{% if perms.chat.view_usagelog %} · <a href="{% url 'chat:usage' %}">Usage logs</a>{% endif %}</p>{% endif %}
+      {% if request.user.is_staff %}
+        <p>
+          <a href="{% url 'knowledge:developer' %}">Developer tools</a>
+          {% if perms.chat.view_usagelog %}
+            · <a href="{% url 'chat:usage' %}">Usage logs</a>
+          {% endif %}
+        </p>
+      {% endif %}
     </header>
 
-    <section id="chat-log" class="chat__log" aria-live="polite" aria-label="Conversation">
+    <section
+      id="chat-log"
+      class="chat__log"
+      aria-live="polite"
+      aria-label="Conversation"
+      data-define-url="{% url 'chat:define' %}"
+    >
       <div class="msg msg--bot">
         <p class="msg__text">Hello! Type your question in the box below and press Send.
 For example: “{{ example_question }}”</p>
@@ -26,15 +41,37 @@ For example: “{{ example_question }}”</p>
 
     <form id="chat-form" class="chat__form" data-api-url="{% url 'chat:api' %}">
       <label for="chat-input" class="chat__label">Your question</label>
+
       <div class="chat__row">
-        <textarea id="chat-input" rows="2" maxlength="1000"
-                  placeholder="Type your question here" autocomplete="off"></textarea>
+        <textarea
+          id="chat-input"
+          rows="2"
+          maxlength="1000"
+          placeholder="Type your question here"
+          autocomplete="off"
+        ></textarea>
+
         <button id="send-btn" type="submit">Send</button>
       </div>
-      <p class="chat__hint">Press Enter to send. Press Shift + Enter for a new line.</p>
-      <p class="chat__hint chat__privacy" id="log-notice">Your questions are saved so we can see how this service is used and improve it. We do not save your name, your account or anything else about you, so please don't type personal details.</p>
+
+      <p class="chat__hint">
+        Press Enter to send. Press Shift + Enter for a new line.
+      </p>
+
+      <p class="chat__hint">
+        Highlight a word or short phrase in a chatbot answer
+        to see its definition in everyday language.
+      </p>
+
+      <p class="chat__hint chat__privacy" id="log-notice">
+        Your questions are saved so we can see how this service is used
+        and improve it. We do not save your name, your account or anything
+        else about you, so please don't type personal details.
+      </p>
     </form>
   </main>
+
   <script src="{% static 'chat/chat.js' %}"></script>
+  <script src="{% static 'chat/definitions.js' %}?v=3"></script>
 </body>
 </html>

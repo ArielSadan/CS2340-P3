@@ -1,7 +1,8 @@
+
 from django.urls import include, path
 from django.views.generic import RedirectView
 
-from . import usage_views, views
+from . import definition_views, usage_views, views
 
 app_name = "chat"
 
@@ -15,8 +16,9 @@ urlpatterns = [
         ),
         name="perofrmance",
     ),
-    path("usage/", usage_views.usage_logs, name="usage"),  # #12 usage logs (site page)
+    path("usage/", usage_views.usage_logs, name="usage"),
     path("developer/", include("chat.developer_urls")),
     path("", views.chat_page, name="page"),
     path("api/chat/", views.chat_api, name="api"),
+    path("api/define/", definition_views.define_term, name="define"),
 ]
